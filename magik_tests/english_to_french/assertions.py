@@ -20,6 +20,6 @@ tests = [
         "name": "output matches regex",
         "vars": {"language": "French", "text_to_translate": "Hello good people"},
         "eval_function": regex_match,
-        "args": [".*lem.*"],
+        "args": [".*le m.*"],
     },
 ]

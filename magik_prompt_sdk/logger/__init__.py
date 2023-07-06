@@ -35,14 +35,26 @@ class CLIAppLogger(logging.Logger, metaclass=Singleton):
         self.info(f"\033[32m{message}\033[0m")  # Output info log in green
 
     def error(self, message, *args, **kwargs):
-        super().error(
-            "ERROR: " + message, *args, **kwargs
-        )  # Prepend log message with "ERROR: "
+        super().error("ERROR: " + message, *args, **kwargs)
 
     def warning(self, message, *args, **kwargs):
-        super().warning(
-            "WARN: " + message, *args, **kwargs
-        )  # Prepend log message with "WARN: "
+        super().warning("WARN: " + message, *args, **kwargs)
+
+    def log_with_color(self, message, color, *args, **kwargs):
+        colors = {
+            "black": "30",
+            "red": "31",
+            "green": "32",
+            "yellow": "33",
+            "blue": "34",
+            "magenta": "35",
+            "cyan": "36",
+            "white": "37",
+        }
+
+        color_code = colors.get(color.lower(), "37")
+        formatted_message = f"\033[{color_code}m{message}\033[0m"
+        print(formatted_message, *args, **kwargs)
 
 
 def setup_logger():

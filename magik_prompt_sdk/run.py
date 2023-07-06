@@ -14,7 +14,6 @@ def run_tests(test_name):
 
 
 def _run_tests_for_prompt(tests, raw_prompt):
-    # output test results
     logger.info("---------------")
     logger.info("TEST RESULTS")
     logger.info("---------------")
