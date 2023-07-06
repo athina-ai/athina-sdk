@@ -9,9 +9,11 @@ def generate_test(test_name):
     logger.debug(f"Generating test {test_name}...\n")
     test_path = f"./{TEST_DIR}/{test_name}"
     example_assertions = read_from_file(
-        f"{MAGIK_SDK_DIR}/magik_tests/example/assertions.py"
+        f"{MAGIK_SDK_DIR}/magik_prompt_sdk/examples/assertions.py"
     )
-    example_prompt = read_from_file(f"{MAGIK_SDK_DIR}/magik_tests/example/prompt.txt")
+    example_prompt = read_from_file(
+        f"{MAGIK_SDK_DIR}/magik_prompt_sdk/examples/prompt.txt"
+    )
     write_to_file(f"{test_path}/assertions.py", example_assertions)
     write_to_file(f"{test_path}/prompt.txt", example_prompt)
     logger.success(

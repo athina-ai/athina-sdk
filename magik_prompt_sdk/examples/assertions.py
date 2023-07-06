@@ -1,4 +1,4 @@
-# from magik_prompt_sdk import eval
+from magik_prompt_sdk.evaluators import contains
 
 
 # Define custom functions here
@@ -11,9 +11,9 @@ def custom_function():
 tests = [
     # Test 1: Test that output contains "Hello World"
     {
-        "name": "output contains hello world",
-        "eval_function": custom_function,
-        "vars": {"name": "Shiv"},
-        "args": ["Hello World"],
+        "name": "output contains Bonjour",
+        "eval_function": contains,
+        "vars": {"text_to_translate": "Hello World"},
+        "args": ["Bonjour"],
     },
 ]
