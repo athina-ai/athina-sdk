@@ -1,1 +1,1 @@
-Write an email to {{name}} from {{company}}
+Translate this text from English to {language}: {text_to_translate}

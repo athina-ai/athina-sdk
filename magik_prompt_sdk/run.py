@@ -1,57 +1,30 @@
 import os
 import importlib.util
 from magik_prompt_sdk.logger import logger
-from magik_prompt_sdk.utils import normalize_output_string
+from magik_prompt_sdk.utils import normalize_output_string, substitute_vars
 from magik_prompt_sdk.openai import OpenAI
 from magik_prompt_sdk.constants import OPEN_AI_API_KEY, OPEN_AI_DEFAULT_MODEL
+from magik_prompt_sdk.sys_exec import read_from_file
 
 
-def run_test(test_name):
-    # initialize OpenAI
-    openai = OpenAI(OPEN_AI_API_KEY)
+def run_tests(test_name):
+    tests = _load_tests(test_name)
+    raw_prompt = _load_prompt(test_name)
+    _run_tests_for_prompt(tests, raw_prompt)
 
-    tests = load_tests(test_name)
 
-    # Get the prompt and output from the test
-    prompt = "Tranlate this to French: Hello World"
-    output = openai.openai_chat_completion_message(
-        model=OPEN_AI_DEFAULT_MODEL, prompt=prompt
-    )
-
-    # Normalize the output of the prompt response
-    normalized_output = normalize_output_string(output)
-
-    # Output prompt results
-    logger.info("---------------")
-    logger.info("PROMPT RESULTS")
-    logger.info("---------------")
-    logger.info("\n")
-    logger.info(f"Prompt: {prompt}")
-    logger.info(f"Prompt Response: {output}")
-    logger.info(f"Normalized Response: {normalized_output}")
-
+def _run_tests_for_prompt(tests, raw_prompt):
     # output test results
-    logger.info("\n")
     logger.info("---------------")
     logger.info("TEST RESULTS")
     logger.info("---------------")
     logger.info("\n")
 
     num_tests_passed = 0
-    for index, test in enumerate(tests):
-        test_name = test["name"]
-        test_function_result = test["eval_function"](normalized_output, *test["args"])
-        test_function_result_bool = test_function_result["result"]
-        test_passed = "✅ Passed" if test_function_result["result"] else "❌ Failed"
-        test_result_reason = test_function_result["reason"]
-
-        if test_function_result_bool:
+    for test in tests:
+        test_result = _run_individual_test_for_prompt(test, raw_prompt)
+        if test_result:
             num_tests_passed += 1
-
-        logger.info(f"Test Case {index}: {test['name']}")
-        logger.info(f"Test Result: {test_passed}")
-        logger.info(f"Reason: {test_result_reason}")
-        logger.info("\n")
 
     num_tests_failed = len(tests) - num_tests_passed
 
@@ -68,7 +41,39 @@ def run_test(test_name):
         )
 
 
-def load_tests(test_name):
+def _run_individual_test_for_prompt(test, raw_prompt):
+    openai = OpenAI(OPEN_AI_API_KEY)
+    prompt = substitute_vars(raw_prompt, test["vars"])
+    prompt_response = openai.openai_chat_completion_message(
+        model=OPEN_AI_DEFAULT_MODEL, prompt=prompt
+    )
+    return _run_individual_test_for_prompt_response(test, prompt, prompt_response)
+
+
+def _run_individual_test_for_prompt_response(test, prompt, prompt_response):
+    _print_prompt_results(prompt, prompt_response)
+    test_description = test["name"]
+    test_function_result = test["eval_function"](prompt_response, *test["args"])
+    test_function_result_bool = test_function_result["result"]
+    test_passed = "✅ Passed" if test_function_result["result"] else "❌ Failed"
+    test_result_reason = test_function_result["reason"]
+
+    logger.info(f"Test: {test_description}")
+    logger.info(f"Test Result: {test_passed}")
+    logger.info(f"Reason: {test_result_reason}")
+    logger.info("\n")
+
+    if test_function_result_bool:
+        return True
+
+
+def _load_prompt(test_name):
+    test_file_path = f"./magik_tests/{test_name}/prompt.txt"
+    absolute_path = os.path.abspath(test_file_path)
+    return read_from_file(absolute_path)
+
+
+def _load_tests(test_name):
     test_file_path = f"./magik_tests/{test_name}/assertions.py"
     # Get the absolute path by resolving against the current working directory
     absolute_path = os.path.abspath(test_file_path)
@@ -77,9 +82,6 @@ def load_tests(test_name):
     directory, module_name = os.path.split(absolute_path)
     module_name = os.path.splitext(module_name)[0]
 
-    # Set the current working directory to the test directory
-    os.chdir(directory)
-
     # Load the module dynamically
     spec = importlib.util.spec_from_file_location(module_name, absolute_path)
     module = importlib.util.module_from_spec(spec)
@@ -87,3 +89,8 @@ def load_tests(test_name):
 
     # Access the `tests` array from the module
     return getattr(module, "tests", [])
+
+
+def _print_prompt_results(prompt, prompt_response):
+    logger.info(f"Prompt: {prompt}")
+    logger.info(f"Prompt Response: {prompt_response}")

@@ -5,3 +5,7 @@ def normalize_output_string(str):
     str = str.replace("'", "")
     str = str.replace('"', "")
     return str
+
+
+def substitute_vars(string, vars_dict):
+    return string.format(**vars_dict)

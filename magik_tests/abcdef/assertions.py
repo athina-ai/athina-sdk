@@ -12,13 +12,13 @@ tests = [
     # Test 1: Test that output contains "Hello World"
     {
         "name": "output contains",
-        # "vars": {"name": "Shiv"},
+        "vars": {"language": "French", "text_to_translate": "Hello good people"},
         "eval_function": contains,
         "args": ["Bonjour"],
     },
     {
         "name": "output matches regex",
-        # "vars": {"name": "Shiv"},
+        "vars": {"language": "French", "text_to_translate": "Hello good people"},
         "eval_function": regex_match,
         "args": [".*lem.*"],
     },

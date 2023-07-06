@@ -2,13 +2,13 @@
 
 import argparse
 from magik_prompt_sdk.generate import generate_test
-from magik_prompt_sdk.run import run_test
+from magik_prompt_sdk.run import run_tests
 from magik_prompt_sdk.deploy import deploy_test
 from magik_prompt_sdk.logger import logger
 
 commands = {
     "generate": generate_test,
-    "run": run_test,
+    "run": run_tests,
     "deploy": deploy_test,
 }
 
