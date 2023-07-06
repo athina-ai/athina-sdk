@@ -2,12 +2,14 @@
 
 import argparse
 from magik_prompt_sdk.generate import generate_test
+from magik_prompt_sdk.run import run_test
+from magik_prompt_sdk.deploy import deploy_test
 from magik_prompt_sdk.logger import logger
 
 commands = {
     "generate": generate_test,
-    "run": generate_test,
-    "deploy": generate_test,
+    "run": run_test,
+    "deploy": deploy_test,
 }
 
 
@@ -23,11 +25,11 @@ def main():
     test_name = args.test_name
 
     if not cmd or not test_name:
-        print("Missing arguments")
+        logger.error("Missing arguments")
         return
 
     if cmd not in commands:
-        print(f"Error: Command {cmd} not found")
+        logger.error(f"Error: Command {cmd} not found")
         return
     command_function = commands[cmd]
 
