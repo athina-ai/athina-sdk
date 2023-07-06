@@ -1,4 +1,4 @@
-from magik_prompt_sdk import eval
+# from magik_prompt_sdk import eval
 
 
 # Define custom functions here
@@ -12,7 +12,7 @@ tests = [
     # Test 1: Test that output contains "Hello World"
     {
         "name": "output contains hello world",
-        "eval_function": eval.contains,
+        "eval_function": custom_function,
         "vars": {"name": "Shiv"},
         "args": ["Hello World"],
     },
