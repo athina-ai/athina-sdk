@@ -11,29 +11,70 @@ class OpenAI:
         self.openai = openai
         self.openai.api_key = API_KEY
 
-    def chat_completion(self, model, prompt):
-        """
-        Call the OpenAI API to generate a chat completion for models like gpt3.5 turbo and gpt 4
-        """
-        promptResponse = requests.post(
-            f"{API_BASE_URL}/api/v1/prompt", data={"text": prompt}
-        ).json()
-        completion = self.openai.ChatCompletion.create(
-            model=model, messages=[{"role": "user", "content": prompt}]
-        )
-        self.save_prompt_run_chat_completion(model, completion, promptResponse)
-        return completion
-
-    def completion(self, model, prompt):
+    # ----------
+    # --- Functions that simply call OpenAI --- #
+    # ----------
+    def openai_completion(self, model, prompt):
         """
         Call the OpenAI API to generate a completion for models like davinci-003 and davinci-002
         """
-        promptResponse = requests.post(
-            f"{API_BASE_URL}/api/v1/prompt", data={"text": prompt}
-        ).json()
-        completion = self.openai.Completion.create(model=model, prompt=prompt)
-        self.save_prompt_run_completion(model, completion, promptResponse)
+        return self.openai.Completion.create(model=model, prompt=prompt)
+
+    def openai_chat_completion(self, model, prompt):
+        """
+        Call the OpenAI API to generate a chat completion for models like GPT 3.5 turbo and GPT 4
+        """
+        return self.openai.ChatCompletion.create(
+            model=model, messages=[{"role": "user", "content": prompt}]
+        )
+
+    def openai_chat_completion_message(self, model, prompt):
+        """
+        Call the OpenAI API to generate a chat completion for models like GPT 3.5 turbo and GPT 4
+        Returns just the message content string
+        """
+        response = self.openai_chat_completion(model, prompt)
+        return response.choices[0].message.content
+
+    # ----------
+    # --- Functions that call OpenAI and also save prompts / prompt runs --- #
+    # ----------
+
+    def chat_completion(self, model, prompt, save_to_db=True):
+        """
+        Call the OpenAI API to generate a chat completion for models like gpt3.5 turbo and gpt 4
+        """
+        if save_to_db:
+            promptResponse = requests.post(
+                f"{API_BASE_URL}/api/v1/prompt", data={"text": prompt}
+            ).json()
+
+        completion = self.openai_chat_completion(model, prompt)
+
+        if save_to_db:
+            self.save_prompt_run_chat_completion(
+                model, completion, promptResponse, save_to_db
+            )
         return completion
+
+    def completion(self, model, prompt, save_to_db=True):
+        """
+        Call the OpenAI API to generate a completion for models like davinci-003 and davinci-002
+        """
+        if save_to_db:
+            promptResponse = requests.post(
+                f"{API_BASE_URL}/api/v1/prompt", data={"text": prompt}
+            ).json()
+
+        completion = self.openai_completion(model, prompt)
+
+        if save_to_db:
+            self.save_prompt_run_completion(model, completion, promptResponse)
+        return completion
+
+    # ----------
+    # --- Functions that save prompts / prompt runs --- #
+    # ----------
 
     def save_prompt_run_chat_completion(self, model, completion, promptResponse):
         """
@@ -49,7 +90,6 @@ class OpenAI:
                 "tokensUsed": int(completion.usage.total_tokens),
             },
         )
-        # requests.post("http://localhost:9000/api/v1/promptRun", json={"promptId": promptResponse["data"]["prompt"]["id"], "languageModelId": completion.model,"promptSent": promptResponse["data"]["prompt"]["text"],"promptResponse": completion.choices[0].text, "tokensUsed": int(completion.usage.total_tokens)})
 
     def save_prompt_run_completion(self, model, completion, promptResponse):
         """
