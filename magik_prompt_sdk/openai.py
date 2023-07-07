@@ -7,9 +7,10 @@ GPT3_MODELS = ["text-davinci-003", "text-davinci-002"]
 
 
 class OpenAI:
-    def __init__(self, API_KEY):
+    def __init__(self, API_KEY, MAGIK_API_KEY):
         self.openai = openai
         self.openai.api_key = API_KEY
+        self.magik_api_key = MAGIK_API_KEY
 
     # ----------
     # --- Functions that simply call OpenAI --- #
