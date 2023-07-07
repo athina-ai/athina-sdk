@@ -93,6 +93,7 @@ class OpenAI:
                 "promptSent": promptResponse["data"]["prompt"]["text"],
                 "promptResponse": completion.choices[0].message.content,
                 "tokensUsed": int(completion.usage.total_tokens),
+                "testId": "testId"
             },
             headers={
                 "magik-api-key": self.magik_api_key,
@@ -111,6 +112,7 @@ class OpenAI:
                 "promptSent": promptResponse["data"]["prompt"]["text"],
                 "promptResponse": completion.choices[0].text,
                 "tokensUsed": int(completion.usage.total_tokens),
+                "testId": "testId"
             },
             headers={
                 "magik-api-key": self.magik_api_key,
