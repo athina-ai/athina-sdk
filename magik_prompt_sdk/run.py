@@ -142,7 +142,7 @@ def _log_prompt_results(result_obj, log_file=None):
 
 
 def _log_test_results(result_obj, log_file=None):
-    test_description = result_obj["test"]["name"]
+    test_description = result_obj["test"]["description"]
     test_function_result_bool = result_obj["test_result"]["result"]
     test_result_str = "✅ Passed" if test_function_result_bool else "❌ Failed"
     test_result_reason = result_obj["test_result"]["reason"]

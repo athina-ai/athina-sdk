@@ -19,7 +19,7 @@ def custom_function(*args):
 tests = [
     # Test 1: Test that output contains any of the keywords
     {
-        "name": "output contains any of the keywords",
+        "description": "output contains any of the keywords",
         "eval_function": contains_any,
         "vars": {"text_to_translate": "Hello World"},
         "args": [["boNjourss", "bonjour", "Monde"]],
@@ -27,7 +27,7 @@ tests = [
     },
     # Test 2: Test that output contains all of the keywords
     {
-        "name": "output contains all of the keywords",
+        "description": "output contains all of the keywords",
         "eval_function": contains_all,
         "vars": {"text_to_translate": "Hello World"},
         "args": [["boNjourss", "bonjour", "Monde"]],
@@ -35,7 +35,7 @@ tests = [
     },
     # Test 3: Test that output contains a specific keyword
     {
-        "name": "output contains all of the keywords",
+        "description": "output contains all of the keywords",
         "eval_function": contains,
         "vars": {"text_to_translate": "Hello World"},
         "args": ["boNjour"],
@@ -43,7 +43,7 @@ tests = [
     },
     # Test 4: Test that output contains any of the keywords
     {
-        "name": "output contains all of the keywords",
+        "description": "output contains all of the keywords",
         "eval_function": contains_any,
         "vars": {"text_to_translate": "Hello World"},
         "args": [["boNjourss", "bonjour", "Monde"]],
@@ -51,7 +51,7 @@ tests = [
     },
     # Test 5: Test that output contains none of the keywords
     {
-        "name": "output contains none of the keywords",
+        "description": "output contains none of the keywords",
         "eval_function": contains_none,
         "vars": {"text_to_translate": "Hello World"},
         "args": [["boNjourss", "bonjour", "Monde"]],
@@ -59,7 +59,7 @@ tests = [
     },
     # Test 6: Test that output passes a custom test function
     {
-        "name": "output passes custom function",
+        "description": "output passes custom function",
         "eval_function": custom_function,
         "vars": {"text_to_translate": "Hello World"},
         "args": [],
@@ -67,7 +67,7 @@ tests = [
     },
     # Test 7: Test that output fails a custom test function
     {
-        "name": "output does not pass custom_function",
+        "description": "output does not pass custom_function",
         "eval_function": negate,
         "vars": {"text_to_translate": "Hello World"},
         "args": [contains, "Hello World"],
@@ -75,7 +75,7 @@ tests = [
     },
     # Test 8: Grade using LLM
     {
-        "name": "grade using LLM",
+        "description": "grade using LLM",
         "eval_function": grade_using_llm,
         "vars": {"text_to_translate": "Hello World"},
         "args": ["If the output contains Bonjour, then pass the Test"],
