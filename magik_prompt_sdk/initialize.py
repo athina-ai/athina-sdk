@@ -1,6 +1,13 @@
 import os
 from magik_prompt_sdk.logger import logger
 from magik_prompt_sdk.sys_exec import write_to_file
+from magik_prompt_sdk.constants import (
+    TESTRUNS_DIR,
+    TEST_DIR,
+    CONFIG_FILE_PATH,
+    EXAMPLE_CONFIG_PATH,
+)
+from magik_prompt_sdk.sys_exec import read_from_file
 
 
 # Create magik_tests directory
@@ -13,42 +20,42 @@ def initialize():
 
 
 def create_magik_tests_dir():
-    if not os.path.exists("./magik_tests"):
-        os.mkdir("./magik_tests")
-        logger.info("✅ Created ./magik_tests directory")
+    if not os.path.exists(TEST_DIR):
+        os.makedirs(TEST_DIR, exist_ok=True)
+        logger.info(f"✅ Created {TEST_DIR} directory")
     else:
-        logger.info("./magik_tests directory already exists")
+        logger.info(f"{TEST_DIR} directory already exists")
 
 
 def create_magik_test_runs_dir():
-    if not os.path.exists("./magik_test_runs"):
-        os.mkdir("./magik_test_runs")
-        logger.error("✅ Created ./magik_test_runs directory")
+    if not os.path.exists(TESTRUNS_DIR):
+        os.makedirs(TESTRUNS_DIR, exist_ok=True)
+        logger.info(f"✅ Created {TESTRUNS_DIR} directory")
     else:
-        logger.info("./magik_test_runs directory already exists")
+        logger.info(f"{TESTRUNS_DIR} directory already exists")
 
 
 def create_magik_config_file():
-    magik_config_path = "./magik_tests/magik_config.json"
-
     # Check if magik_config.json already exists
-    if os.path.exists(magik_config_path):
-        logger.info(f"{magik_config_path} already exists!")
+    if os.path.exists(CONFIG_FILE_PATH):
+        logger.info(f"{CONFIG_FILE_PATH} already exists!")
         return
 
     # Create file magik_config.json
     logger.debug("Creating magik_config.json...")
+    example_config_contents = _read_example_config_file()
     write_to_file(
-        magik_config_path,
-        """{
-    "MAGIK_API_KEY": "",
-    "OPEN_AI_API_KEY": ""
-}""",
+        CONFIG_FILE_PATH,
+        example_config_contents,
     )
 
-    logger.info("✅ Created ./magik_tests/magik_config.json (config file)")
+    logger.info(f"✅ Created {CONFIG_FILE_PATH} (config file)")
     logger.info("")
     logger.log_with_color(
-        "IMP: Please fill in the API keys in magik_config.json", "yellow"
+        f"IMP: Please fill in the API keys in {CONFIG_FILE_PATH}", "yellow"
     )
     logger.info("")
+
+
+def _read_example_config_file():
+    return read_from_file(EXAMPLE_CONFIG_PATH)

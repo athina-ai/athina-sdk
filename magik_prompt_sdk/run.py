@@ -1,27 +1,33 @@
 import os
+import sys
 import importlib.util
+from datetime import datetime
 from magik_prompt_sdk.logger import logger
 from magik_prompt_sdk.utils import normalize_output_string, substitute_vars
 from magik_prompt_sdk.openai import OpenAI
-from magik_prompt_sdk.sys_exec import read_from_file
+from magik_prompt_sdk.sys_exec import read_from_file, create_file
 from magik_prompt_sdk.config import get_open_ai_api_key, get_open_ai_default_model
+from magik_prompt_sdk.constants import TESTRUNS_DIR, TEST_DIR
 
 
 def run_tests(test_name):
     tests = _load_tests(test_name)
     raw_prompt = _load_prompt(test_name)
-    _run_tests_for_prompt(tests, raw_prompt)
+    log_file_path = _log_file_path(test_name)
+    _run_tests_for_prompt(test_name, tests, raw_prompt, log_file_path=log_file_path)
 
 
-def _run_tests_for_prompt(tests, raw_prompt):
-    logger.info("---------------")
-    logger.info("TEST RESULTS")
-    logger.info("---------------")
-    logger.info("\n")
+def _run_tests_for_prompt(test_name, tests, raw_prompt, log_file_path):
+    _log_to_file_and_console("---------------")
+    _log_to_file_and_console("TEST RESULTS")
+    _log_to_file_and_console("---------------")
+    _log_to_file_and_console("\n")
 
     num_tests_passed = 0
     for test in tests:
-        test_result = _run_individual_test_for_prompt(test, raw_prompt)
+        test_result = _run_individual_test_for_prompt(
+            test_name, test, raw_prompt, log_file_path
+        )
         if test_result:
             num_tests_passed += 1
 
@@ -40,15 +46,19 @@ def _run_tests_for_prompt(tests, raw_prompt):
         )
 
 
-def _run_individual_test_for_prompt(test, raw_prompt):
+def _run_individual_test_for_prompt(test_name, test, raw_prompt, log_file_path):
     openai = OpenAI()
     prompt = substitute_vars(raw_prompt, test["vars"])
     model = get_open_ai_default_model()
     prompt_response = openai.openai_chat_completion_message(model=model, prompt=prompt)
-    return _run_individual_test_for_prompt_response(test, prompt, prompt_response)
+    return _run_individual_test_for_prompt_response(
+        test_name, test, prompt, prompt_response, log_file_path=log_file_path
+    )
 
 
-def _run_individual_test_for_prompt_response(test, prompt, prompt_response):
+def _run_individual_test_for_prompt_response(
+    test_name, test, prompt, prompt_response, log_file_path
+):
     test_function_result_obj = test["eval_function"](prompt_response, *test["args"])
     result_obj = _generate_result_object(
         test=test,
@@ -57,19 +67,22 @@ def _run_individual_test_for_prompt_response(test, prompt, prompt_response):
         prompt_response=prompt_response,
     )
 
-    _log_results(result_obj)
+    _log_results(
+        result_obj,
+        log_file_path=log_file_path,
+    )
 
     return result_obj["test_result"]["result"]
 
 
 def _load_prompt(test_name):
-    test_file_path = f"./magik_tests/{test_name}/prompt.txt"
+    test_file_path = f"{TEST_DIR}/{test_name}/prompt.txt"
     absolute_path = os.path.abspath(test_file_path)
     return read_from_file(absolute_path)
 
 
 def _load_tests(test_name):
-    test_file_path = f"./magik_tests/{test_name}/assertions.py"
+    test_file_path = f"{TEST_DIR}/{test_name}/assertions.py"
     # Get the absolute path by resolving against the current working directory
     absolute_path = os.path.abspath(test_file_path)
 
@@ -102,27 +115,48 @@ def _generate_result_object(test, test_result, prompt, prompt_response):
     }
 
 
-def _log_results(result_obj):
-    _print_prompt_results(result_obj)
-    _print_test_results(result_obj)
+def _log_results(result_obj, log_file_path=None):
+    sys.stdout.flush()  # Flush the stdout buffer to ensure immediate printing to the console
+    if log_file_path is not None:
+        create_file(log_file_path)
+        with open(log_file_path, "a") as log_file:
+            _log_prompt_results(result_obj, log_file)
+            _log_test_results(result_obj, log_file)
+    else:
+        _log_prompt_results(result_obj)
+        _log_test_results(result_obj)
 
 
-def _print_prompt_results(result_obj):
+def _log_to_file_and_console(output, log_file=None):
+    if log_file is not None:
+        log_file.write(output + "\n")
+        log_file.flush()  # Ensure immediate writing to the file
+    logger.info(output)
+
+
+def _log_prompt_results(result_obj, log_file=None):
     prompt = result_obj["prompt"]
     prompt_response = result_obj["prompt_response"]
-    logger.info(f"Prompt: {prompt}")
-    logger.info(f"Prompt Response: {prompt_response}")
+    _log_to_file_and_console(f"Prompt: {prompt}", log_file)
+    _log_to_file_and_console(f"Prompt Response: {prompt_response}", log_file)
 
 
-def _print_test_results(result_obj):
+def _log_test_results(result_obj, log_file=None):
     test_description = result_obj["test"]["name"]
     test_function_result_bool = result_obj["test_result"]["result"]
     test_result_str = "✅ Passed" if test_function_result_bool else "❌ Failed"
     test_result_reason = result_obj["test_result"]["reason"]
     failure_labels = result_obj["failure_labels"]
 
-    logger.info(f"Test: {test_description}")
-    logger.info(f"Test Result: {test_result_str}")
-    logger.info(f"Reason: {test_result_reason}")
-    logger.info(f"Failure Labels: {failure_labels}")
-    logger.info("\n")
+    _log_to_file_and_console(f"Test: {test_description}", log_file)
+    _log_to_file_and_console(f"Test Result: {test_result_str}", log_file)
+    _log_to_file_and_console(f"Reason: {test_result_reason}", log_file)
+    _log_to_file_and_console(f"Failure Labels: {failure_labels}", log_file)
+    _log_to_file_and_console("\n", log_file)
+
+
+def _log_file_path(test_name):
+    current_timestamp = datetime.now()
+    formatted_timestamp = current_timestamp.strftime("%Y-%m-%d_%H-%M-%S")
+    log_file_path = f"{TESTRUNS_DIR}/{test_name}/{formatted_timestamp}.txt"
+    return log_file_path

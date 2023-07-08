@@ -60,8 +60,16 @@ async def execute_command_async(command, confirm=True, log=True):
         return error
 
 
-def check_if_file_exists(filepath):
+def file_exists(filepath):
     return os.path.isfile(filepath)
+
+
+def create_file(filepath):
+    directory = os.path.dirname(filepath)
+    os.makedirs(
+        directory, exist_ok=True
+    )  # Create parent directories if they don't exist
+    open(filepath, "a").close()  # Create an empty file at the specified filepath
 
 
 def touch(file_path, confirm=False):
@@ -88,7 +96,7 @@ def append_to_file(file_path, data):
 
 
 def read_from_file(file_path):
-    if check_if_file_exists(file_path) == False:
+    if file_exists(file_path) == False:
         raise Exception(f"File does not exist at {file_path}")
     try:
         with open(file_path, "r") as file:
