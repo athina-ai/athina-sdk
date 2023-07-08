@@ -89,8 +89,12 @@ def _load_tests(test_name):
 def _generate_result_object(test, test_result, prompt, prompt_response):
     did_test_pass = test_result["result"]
     failure_labels = test["failure_labels"] if not did_test_pass else []
+    test_function_name = test["eval_function"].__name__
     return {
-        "test": test,
+        "test": {
+            **test,
+            "eval_function": test_function_name,
+        },
         "test_result": test_result,
         "prompt": prompt,
         "prompt_response": prompt_response,
