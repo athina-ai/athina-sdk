@@ -1,0 +1,1 @@
+Output a random email address and phone number

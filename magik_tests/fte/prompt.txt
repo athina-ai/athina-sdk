@@ -1,1 +1,0 @@
-Write an email to {{name}} from {{company}}

@@ -1,5 +1,6 @@
 import asyncio
 import os
+import json
 import subprocess
 from magik_prompt_sdk.logger import logger
 
@@ -95,3 +96,10 @@ def read_from_file(file_path):
         return data
     except IOError:
         raise Exception(f"Error reading from file: {file_path}")
+
+
+def read_json_file(file_path):
+    data = None
+    with open(file_path, "r") as file:
+        data = json.load(file)
+    return data

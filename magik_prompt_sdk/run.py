@@ -3,8 +3,8 @@ import importlib.util
 from magik_prompt_sdk.logger import logger
 from magik_prompt_sdk.utils import normalize_output_string, substitute_vars
 from magik_prompt_sdk.openai import OpenAI
-from magik_prompt_sdk.constants import OPEN_AI_API_KEY, OPEN_AI_DEFAULT_MODEL
 from magik_prompt_sdk.sys_exec import read_from_file
+from magik_prompt_sdk.config import get_open_ai_api_key, get_open_ai_default_model
 
 
 def run_tests(test_name):
@@ -41,29 +41,25 @@ def _run_tests_for_prompt(tests, raw_prompt):
 
 
 def _run_individual_test_for_prompt(test, raw_prompt):
-    openai = OpenAI(OPEN_AI_API_KEY)
+    openai = OpenAI()
     prompt = substitute_vars(raw_prompt, test["vars"])
-    prompt_response = openai.openai_chat_completion_message(
-        model=OPEN_AI_DEFAULT_MODEL, prompt=prompt
-    )
+    model = get_open_ai_default_model()
+    prompt_response = openai.openai_chat_completion_message(model=model, prompt=prompt)
     return _run_individual_test_for_prompt_response(test, prompt, prompt_response)
 
 
 def _run_individual_test_for_prompt_response(test, prompt, prompt_response):
-    _print_prompt_results(prompt, prompt_response)
-    test_description = test["name"]
-    test_function_result = test["eval_function"](prompt_response, *test["args"])
-    test_function_result_bool = test_function_result["result"]
-    test_passed = "✅ Passed" if test_function_result["result"] else "❌ Failed"
-    test_result_reason = test_function_result["reason"]
+    test_function_result_obj = test["eval_function"](prompt_response, *test["args"])
+    result_obj = _generate_result_object(
+        test=test,
+        test_result=test_function_result_obj,
+        prompt=prompt,
+        prompt_response=prompt_response,
+    )
 
-    logger.info(f"Test: {test_description}")
-    logger.info(f"Test Result: {test_passed}")
-    logger.info(f"Reason: {test_result_reason}")
-    logger.info("\n")
+    _log_results(result_obj)
 
-    if test_function_result_bool:
-        return True
+    return result_obj["test_result"]["result"]
 
 
 def _load_prompt(test_name):
@@ -90,6 +86,39 @@ def _load_tests(test_name):
     return getattr(module, "tests", [])
 
 
-def _print_prompt_results(prompt, prompt_response):
+def _generate_result_object(test, test_result, prompt, prompt_response):
+    did_test_pass = test_result["result"]
+    failure_labels = test["failure_labels"] if not did_test_pass else []
+    return {
+        "test": test,
+        "test_result": test_result,
+        "prompt": prompt,
+        "prompt_response": prompt_response,
+        "failure_labels": failure_labels,
+    }
+
+
+def _log_results(result_obj):
+    _print_prompt_results(result_obj)
+    _print_test_results(result_obj)
+
+
+def _print_prompt_results(result_obj):
+    prompt = result_obj["prompt"]
+    prompt_response = result_obj["prompt_response"]
     logger.info(f"Prompt: {prompt}")
     logger.info(f"Prompt Response: {prompt_response}")
+
+
+def _print_test_results(result_obj):
+    test_description = result_obj["test"]["name"]
+    test_function_result_bool = result_obj["test_result"]["result"]
+    test_result_str = "✅ Passed" if test_function_result_bool else "❌ Failed"
+    test_result_reason = result_obj["test_result"]["reason"]
+    failure_labels = result_obj["failure_labels"]
+
+    logger.info(f"Test: {test_description}")
+    logger.info(f"Test Result: {test_result_str}")
+    logger.info(f"Reason: {test_result_reason}")
+    logger.info(f"Failure Labels: {failure_labels}")
+    logger.info("\n")

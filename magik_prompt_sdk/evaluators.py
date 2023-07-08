@@ -2,7 +2,7 @@
 import re
 import ast
 from magik_prompt_sdk.openai import OpenAI
-from magik_prompt_sdk.constants import OPEN_AI_API_KEY, OPEN_AI_DEFAULT_MODEL
+from magik_prompt_sdk.constants import OPEN_AI_DEFAULT_MODEL
 
 
 def generate_grading_prompt(output_to_evaluate, grading_criteria):
@@ -93,6 +93,28 @@ def contains_any(output_to_test, keywords, case_sensitive=False):
     return {"result": result, "reason": reason}
 
 
+def contains_none(output_to_test, keywords, case_sensitive=False):
+    if not case_sensitive:
+        output_to_test = output_to_test.lower()
+        keywords = list(map(lambda k: k.lower(), keywords))
+
+    found_keywords = []
+    for keyword in keywords:
+        if keyword in output_to_test:
+            found_keywords.append(keyword)
+
+    if found_keywords:
+        result = False
+        reason = f"One or more keywords were found in output: " + ", ".join(
+            found_keywords
+        )
+    else:
+        result = True
+        reason = "No keywords found in output"
+
+    return {"result": result, "reason": reason}
+
+
 def negate(output_to_test, eval_function, *args, **kwargs):
     eval_result = eval_function(output_to_test, *args, **kwargs)
     return {
@@ -149,7 +171,7 @@ def ends_with(output_to_test, substring, case_sensitive=False):
 
 
 def grade_using_llm(output_to_test, eval_rubric):
-    openai = OpenAI(OPEN_AI_API_KEY)
+    openai = OpenAI()
     # eval_rubric is a string that contains the rubric by which to evaluate the output
     evaluation_prompt = generate_grading_prompt(output_to_test, eval_rubric)
     llm_response = openai.openai_chat_completion_message(
@@ -168,3 +190,23 @@ def grade_using_llm(output_to_test, eval_rubric):
         result = False
         reason = "LLM response does not contain a boolean value"
     return {"result": result, "reason": reason}
+
+
+def is_email(output_to_test):
+    return regex_match(
+        output_to_test, r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    )
+
+
+def is_phone_number(output_to_test):
+    return regex_match(output_to_test, r"^\+?1?\d{9,15}$")
+
+
+def contains_email(output_to_test):
+    return regex_match(
+        output_to_test, r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
+    )
+
+
+def contains_phone_number(output_to_test):
+    return regex_match(output_to_test, r"\+?1?\d{9,15}|\(\d{3}\)\s*\d{3}[-\s]?\d{4}")

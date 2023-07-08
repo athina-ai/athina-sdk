@@ -2,15 +2,21 @@ import requests
 import openai
 import json
 from magik_prompt_sdk.constants import API_BASE_URL
+from magik_prompt_sdk.config import (
+    get_open_ai_api_key,
+    get_open_ai_default_model,
+    get_magik_api_key,
+)
 
 GPT3_MODELS = ["text-davinci-003", "text-davinci-002"]
 
 
 class OpenAI:
-    def __init__(self, API_KEY, MAGIK_API_KEY):
+    def __init__(self):
         self.openai = openai
-        self.openai.api_key = API_KEY
-        self.magik_api_key = MAGIK_API_KEY
+        self.default_model = get_open_ai_default_model()
+        self.magik_api_key = get_magik_api_key()
+        self.openai.api_key = get_open_ai_api_key()
 
     # ----------
     # --- Functions that simply call OpenAI --- #
@@ -47,17 +53,17 @@ class OpenAI:
         """
         if save_to_db:
             promptResponse = requests.post(
-                f"{API_BASE_URL}/api/v1/prompt", data={"text": prompt}, headers={
+                f"{API_BASE_URL}/api/v1/prompt",
+                data={"text": prompt},
+                headers={
                     "magik-api-key": self.magik_api_key,
-                }
+                },
             ).json()
 
         completion = self.openai_chat_completion(model, prompt)
 
         if save_to_db:
-            self.save_prompt_run_chat_completion(
-                model, completion, promptResponse
-            )
+            self.save_prompt_run_chat_completion(model, completion, promptResponse)
         return completion
 
     def completion(self, model, prompt, save_to_db=True):
@@ -66,9 +72,11 @@ class OpenAI:
         """
         if save_to_db:
             promptResponse = requests.post(
-                f"{API_BASE_URL}/api/v1/prompt", data={"text": prompt}, headers={
+                f"{API_BASE_URL}/api/v1/prompt",
+                data={"text": prompt},
+                headers={
                     "magik-api-key": self.magik_api_key,
-                }
+                },
             ).json()
 
         completion = self.openai_completion(model, prompt)
@@ -93,11 +101,11 @@ class OpenAI:
                 "promptSent": promptResponse["data"]["prompt"]["text"],
                 "promptResponse": completion.choices[0].message.content,
                 "tokensUsed": int(completion.usage.total_tokens),
-                "testId": "testId"
+                "testId": "testId",
             },
             headers={
                 "magik-api-key": self.magik_api_key,
-            }
+            },
         )
 
     def save_prompt_run_completion(self, model, completion, promptResponse):
@@ -112,9 +120,9 @@ class OpenAI:
                 "promptSent": promptResponse["data"]["prompt"]["text"],
                 "promptResponse": completion.choices[0].text,
                 "tokensUsed": int(completion.usage.total_tokens),
-                "testId": "testId"
+                "testId": "testId",
             },
             headers={
                 "magik-api-key": self.magik_api_key,
-            }
+            },
         )
