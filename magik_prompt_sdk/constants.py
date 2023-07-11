@@ -1,4 +1,5 @@
 API_BASE_URL = "http://localhost:9000"
+DEPLOY_URL = f"{API_BASE_URL}/api/v1/testDeploy"
 # API_BASE_URL = "https://magiklabs.app"
 
 # Directory paths
