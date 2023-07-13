@@ -1,7 +1,7 @@
 # Contains functions to evaluate assertions.
 import re
 import ast
-from magik_prompt_sdk.openai import OpenAI
+from magik_prompt_sdk.openai_helper import OpenAI
 from magik_prompt_sdk.constants import OPEN_AI_DEFAULT_MODEL
 
 

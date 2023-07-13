@@ -1,4 +1,4 @@
-from magik_prompt_sdk.logger import logger
+from magik_prompt_sdk.internal_logger import logger
 from magik_prompt_sdk.constants import TEST_DIR
 from magik_prompt_sdk.sys_exec import read_from_file, write_to_file
 from magik_prompt_sdk.constants import EXAMPLES_DIR

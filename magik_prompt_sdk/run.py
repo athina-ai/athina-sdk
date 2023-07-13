@@ -2,11 +2,11 @@ import os
 import sys
 import importlib.util
 from datetime import datetime
-from magik_prompt_sdk.logger import logger
-from magik_prompt_sdk.utils import normalize_output_string, substitute_vars
-from magik_prompt_sdk.openai import OpenAI
+from magik_prompt_sdk.internal_logger import logger
+from magik_prompt_sdk.utils import substitute_vars
+from magik_prompt_sdk.openai_helper import OpenAI
 from magik_prompt_sdk.sys_exec import read_from_file, create_file
-from magik_prompt_sdk.config import get_open_ai_api_key, get_open_ai_default_model
+from magik_prompt_sdk.config import get_open_ai_default_model
 from magik_prompt_sdk.constants import TESTRUNS_DIR, TEST_DIR
 
 
@@ -48,7 +48,7 @@ def _run_tests_for_prompt(test_name, tests, raw_prompt, log_file_path):
 
 def _run_individual_test_for_prompt(test_name, test, raw_prompt, log_file_path):
     openai = OpenAI()
-    prompt = substitute_vars(raw_prompt, test["vars"])
+    prompt = substitute_vars(raw_prompt, test["prompt_vars"])
     model = get_open_ai_default_model()
     prompt_response = openai.openai_chat_completion_message(model=model, prompt=prompt)
     return _run_individual_test_for_prompt_response(
@@ -59,7 +59,9 @@ def _run_individual_test_for_prompt(test_name, test, raw_prompt, log_file_path):
 def _run_individual_test_for_prompt_response(
     test_name, test, prompt, prompt_response, log_file_path
 ):
-    test_function_result_obj = test["eval_function"](prompt_response, *test["args"])
+    test_function_result_obj = test["eval_function"](
+        prompt_response, *test["eval_function_args"]
+    )
     result_obj = _generate_result_object(
         test=test,
         test_result=test_function_result_obj,

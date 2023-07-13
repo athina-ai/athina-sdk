@@ -16,6 +16,7 @@ build/
 venv/
 env/
 ENV/
+magikvenv/
 
 # IDE-specific files
 .idea/

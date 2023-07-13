@@ -12,7 +12,7 @@ from magik_prompt_sdk.evaluators import (
 # Should return { 'result': boolean, 'reason': string }
 def custom_function(*args):
     # Your logic here
-    return {"result": False, "reason": "custom reason."}
+    return {"result": False, "reason": "Hallucination detected."}
 
 
 # Define tests here
@@ -21,64 +21,64 @@ tests = [
     {
         "description": "output contains any of the keywords",
         "eval_function": contains_any,
-        "vars": {"text_to_translate": "Hello World"},
-        "args": [["boNjourss", "bonjour", "Monde"]],
+        "prompt_vars": {"text_to_translate": "Hello World"},
+        "eval_function_args": [["salut", "bonjour", "Monde"]],
         "failure_labels": ["inaccurate"],
     },
     # Test 2: Test that output contains all of the keywords
     {
         "description": "output contains all of the keywords",
         "eval_function": contains_all,
-        "vars": {"text_to_translate": "Hello World"},
-        "args": [["boNjourss", "bonjour", "Monde"]],
+        "prompt_vars": {"text_to_translate": "Hello World"},
+        "eval_function_args": [["boNjourss", "bonjour", "Monde"]],
         "failure_labels": ["inaccurate"],
     },
     # Test 3: Test that output contains a specific keyword
     {
-        "description": "output contains all of the keywords",
+        "description": "output contains a specific keyword",
         "eval_function": contains,
-        "vars": {"text_to_translate": "Hello World"},
-        "args": ["boNjour"],
+        "eval_function_args": ["boNjour"],
+        "prompt_vars": {"text_to_translate": "Hello World"},
         "failure_labels": ["inaccurate"],
     },
     # Test 4: Test that output contains any of the keywords
     {
-        "description": "output contains all of the keywords",
+        "description": "output contains any of the keywords",
         "eval_function": contains_any,
-        "vars": {"text_to_translate": "Hello World"},
-        "args": [["boNjourss", "bonjour", "Monde"]],
-        "failure_labels": ["inaccurate"],
+        "prompt_vars": {"text_to_translate": "Hello World"},
+        "eval_function_args": [["boNjourss", "bonjour", "Monde"]],
+        "failure_labels": ["critical"],
     },
     # Test 5: Test that output contains none of the keywords
     {
-        "description": "output contains none of the keywords",
+        "description": "output does not contain restricted keywords",
         "eval_function": contains_none,
-        "vars": {"text_to_translate": "Hello World"},
-        "args": [["boNjourss", "bonjour", "Monde"]],
-        "failure_labels": ["inaccurate"],
+        "prompt_vars": {"text_to_translate": "Hello World"},
+        "eval_function_args": [["artificial", "intelligence"]],
+        "failure_labels": ["contains_pii"],
     },
     # Test 6: Test that output passes a custom test function
     {
         "description": "output passes custom function",
         "eval_function": custom_function,
-        "vars": {"text_to_translate": "Hello World"},
-        "args": [],
+        "prompt_vars": {"text_to_translate": "Hello World"},
+        "eval_function_args": [],
         "failure_labels": ["hallucination"],
     },
     # Test 7: Test that output fails a custom test function
     {
         "description": "output does not pass custom_function",
         "eval_function": negate,
-        "vars": {"text_to_translate": "Hello World"},
-        "args": [contains, "Hello World"],
+        "prompt_vars": {"text_to_translate": "Hello World"},
+        "eval_function_args": [contains, "Hello World"],
         "failure_labels": ["bad_response_format"],
     },
     # Test 8: Grade using LLM
     {
         "description": "grade using LLM",
         "eval_function": grade_using_llm,
-        "vars": {"text_to_translate": "Hello World"},
-        "args": ["If the output contains Bonjour, then pass the Test"],
+        "prompt_vars": {"text_to_translate": "Hello World"},
+        "eval_function_args": ["If the output contains Bonjour, then pass the Test"],
         "failure_labels": ["bad_response_format"],
     },
 ]

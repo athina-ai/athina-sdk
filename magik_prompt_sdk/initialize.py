@@ -1,5 +1,5 @@
 import os
-from magik_prompt_sdk.logger import logger
+from magik_prompt_sdk.internal_logger import logger
 from magik_prompt_sdk.sys_exec import write_to_file
 from magik_prompt_sdk.constants import (
     TESTRUNS_DIR,

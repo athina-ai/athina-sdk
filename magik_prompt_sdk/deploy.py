@@ -1,7 +1,7 @@
 import os
 import requests
-from magik_prompt_sdk.logger import logger
-from magik_prompt_sdk.constants import API_BASE_URL, CONFIG_FILE_PATH, DEPLOY_URL
+from magik_prompt_sdk.internal_logger import logger
+from magik_prompt_sdk.constants import CONFIG_FILE_PATH, DEPLOY_URL
 from magik_prompt_sdk.config import get_magik_api_key
 
 

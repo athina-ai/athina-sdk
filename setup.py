@@ -1,22 +1,30 @@
 import setuptools
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
+
+with open("requirements.txt") as f:
+    requirements = f.read().splitlines()
+
 setuptools.setup(
-    name="magik_prompt_sdk",
-    version="0.0.2",
-    author="Magik Labs App Team",
+    name="magik",
+    version="0.1.1",
+    author="Magik Labs Team",
     author_email="hello@magiklabs.app",
-    description="SDK to interact with LLM model APIs along with prompt management and versioning",
+    description="SDK to write and run tests for your LLM app",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
-    install_requires=[
-        'openai',
-    ],
+    install_requires=requirements,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    entry_points={
+        "console_scripts": [
+            "magik=magik_prompt_sdk.cli:main",
+        ],
+    },
+    python_requires=">=3.6",
 )

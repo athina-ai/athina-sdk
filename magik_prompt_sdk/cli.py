@@ -5,7 +5,7 @@ from magik_prompt_sdk.initialize import initialize
 from magik_prompt_sdk.generate import generate_test
 from magik_prompt_sdk.run import run_tests
 from magik_prompt_sdk.deploy import deploy_test
-from magik_prompt_sdk.logger import logger
+from magik_prompt_sdk.internal_logger import logger
 
 commands = {
     "init": initialize,
