@@ -1,6 +1,6 @@
 import openai
-from magik_prompt_sdk.logger import logChatResponse
-from magik_prompt_sdk.config import get_open_ai_api_key
+from magik.logger import logChatResponse
+from magik.config import get_open_ai_api_key
 
 if __name__ == "__main__":
     openai.api_key = get_open_ai_api_key()

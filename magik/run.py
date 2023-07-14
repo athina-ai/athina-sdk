@@ -1,13 +1,14 @@
 import os
+import requests
 import sys
 import importlib.util
 from datetime import datetime
-from magik_prompt_sdk.internal_logger import logger
-from magik_prompt_sdk.utils import substitute_vars
-from magik_prompt_sdk.openai_helper import OpenAI
-from magik_prompt_sdk.sys_exec import read_from_file, create_file
-from magik_prompt_sdk.config import get_open_ai_default_model
-from magik_prompt_sdk.constants import TESTRUNS_DIR, TEST_DIR
+from magik.internal_logger import logger
+from magik.utils import substitute_vars
+from magik.openai_helper import OpenAI
+from magik.sys_exec import read_from_file, create_file
+from magik.config import get_open_ai_default_model, get_magik_api_key
+from magik.constants import TESTRUNS_DIR, TEST_DIR, RUN_URL
 
 
 def run_tests(test_name):
@@ -15,6 +16,23 @@ def run_tests(test_name):
     raw_prompt = _load_prompt(test_name)
     log_file_path = _log_file_path(test_name)
     _run_tests_for_prompt(test_name, tests, raw_prompt, log_file_path=log_file_path)
+
+
+def run_tests_in_prod(start_date, end_date, prompt_slug):
+    request_data = {
+        "source": "CLI",
+        "startDate": start_date,
+        "endDate": end_date,
+        "promptSlug": prompt_slug,
+    }
+    print(f"Sending request to {RUN_URL} with data: {request_data}")
+    requests.post(
+        RUN_URL,
+        json=request_data,
+        headers={
+            "magik-api-key": get_magik_api_key(),
+        },
+    )
 
 
 def _run_tests_for_prompt(test_name, tests, raw_prompt, log_file_path):

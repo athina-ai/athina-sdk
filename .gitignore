@@ -39,3 +39,9 @@ docs/_build/
 
 # Other project-specific files
 *.pyc
+
+# Miscellaneous
+.DS_Store
+
+# Magik config file
+magik_config.json

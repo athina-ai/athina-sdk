@@ -8,7 +8,7 @@ with open("requirements.txt") as f:
 
 setuptools.setup(
     name="magik",
-    version="0.1.1",
+    version="0.1.3",
     author="Magik Labs Team",
     author_email="hello@magiklabs.app",
     description="SDK to write and run tests for your LLM app",
@@ -23,7 +23,7 @@ setuptools.setup(
     ],
     entry_points={
         "console_scripts": [
-            "magik=magik_prompt_sdk.cli:main",
+            "magik=magik.cli:main",
         ],
     },
     python_requires=">=3.6",

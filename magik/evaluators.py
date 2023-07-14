@@ -1,8 +1,8 @@
 # Contains functions to evaluate assertions.
 import re
 import ast
-from magik_prompt_sdk.openai_helper import OpenAI
-from magik_prompt_sdk.constants import OPEN_AI_DEFAULT_MODEL
+from magik.openai_helper import OpenAI
+from magik.constants import OPEN_AI_DEFAULT_MODEL
 
 
 def generate_grading_prompt(output_to_evaluate, grading_criteria):

@@ -1,8 +1,8 @@
 import os
 import requests
-from magik_prompt_sdk.internal_logger import logger
-from magik_prompt_sdk.constants import CONFIG_FILE_PATH, DEPLOY_URL
-from magik_prompt_sdk.config import get_magik_api_key
+from magik.internal_logger import logger
+from magik.constants import CONFIG_FILE_PATH, DEPLOY_URL, TEST_DIR
+from magik.config import get_magik_api_key
 
 
 def deploy_test(test_name: str):
@@ -11,7 +11,7 @@ def deploy_test(test_name: str):
         logger.error(f"No API key found. Please add your API key to {CONFIG_FILE_PATH}")
 
     # construct the file path
-    file_path = f"./magik/tests/{test_name}/assertions.py"
+    file_path = f"{TEST_DIR}/{test_name}/assertions.py"
 
     # check if the file exists
     if not os.path.isfile(file_path):
@@ -40,8 +40,8 @@ def deploy_test(test_name: str):
 
 
 def deploy_all(api_key: str):
-    # find all test_ids in ./magik/tests
-    test_names = os.listdir("./magik/tests")
+    # find all test_ids in {TEST_DIR}
+    test_names = os.listdir(TEST_DIR)
 
     for test_name in test_names:
         deploy_test(test_name, api_key)

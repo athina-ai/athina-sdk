@@ -1,5 +1,5 @@
-from magik_prompt_sdk.sys_exec import read_json_file
-from magik_prompt_sdk.constants import CONFIG_FILE_PATH
+from magik.sys_exec import read_json_file
+from magik.constants import CONFIG_FILE_PATH
 
 
 def _load_config():

@@ -1,4 +1,4 @@
-from magik_prompt_sdk.evaluators import (
+from magik.evaluators import (
     contains_any,
     contains_none,
     contains_email,

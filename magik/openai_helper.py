@@ -1,6 +1,6 @@
 import openai
-from magik_prompt_sdk.constants import API_BASE_URL
-from magik_prompt_sdk.config import (
+from magik.constants import API_BASE_URL
+from magik.config import (
     get_open_ai_api_key,
     get_open_ai_default_model,
     get_magik_api_key,
