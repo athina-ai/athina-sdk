@@ -1,0 +1,1 @@
+Translate this text from English to French: {text_to_translate}
