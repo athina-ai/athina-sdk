@@ -3,16 +3,16 @@
 import argparse
 from magik.initialize import initialize
 from magik.generate import generate_test
-from magik.run import run_tests, run_tests_in_prod
 from magik.deploy import deploy_test
 from magik.internal_logger import logger
+from magik.run import Run
 
-commands = {
-    "init": initialize,
-    "generate": generate_test,
-    "run": run_tests,
-    "deploy": deploy_test,
-}
+commands = [
+    "init",
+    "generate",
+    "run",
+    "deploy",
+]
 
 
 def main():
@@ -59,7 +59,8 @@ def main():
         return
 
     if cmd == "run" and not is_production:
-        run_tests(test_name)
+        test_runner = Run()
+        test_runner.run_tests(test_name)
         return
 
     if cmd == "run" and is_production:
@@ -68,7 +69,9 @@ def main():
                 f"Please provide a start_date and end_date argument as well.\n\nUsage: magik run <test_name> --prod --start_date <start_date> --end_date <end_date>"
             )
             return
-        run_tests_in_prod(
+
+        test_runner = Run()
+        test_runner.run_tests_in_prod(
             start_date=start_date,
             end_date=end_date,
             prompt_slug=prompt_slug,

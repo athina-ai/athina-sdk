@@ -1,4 +1,5 @@
 # Contains functions to evaluate assertions.
+import requests
 import re
 import ast
 from magik.openai_helper import OpenAI
@@ -137,8 +138,8 @@ def contains(output_to_test, keyword, case_sensitive=False):
     return {"result": result, "reason": reason}
 
 
-def regex_match(output_to_test, pattern):
-    match = re.match(pattern, output_to_test)
+def regex(output_to_test, pattern):
+    match = re.search(pattern, output_to_test)
     if match:
         return {"result": True, "reason": f"regex pattern {pattern} found in output"}
     else:
@@ -193,20 +194,101 @@ def grade_using_llm(output_to_test, eval_rubric):
 
 
 def is_email(output_to_test):
-    return regex_match(
-        output_to_test, r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
-    )
+    return regex(output_to_test, r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
 
 def is_phone_number(output_to_test):
-    return regex_match(output_to_test, r"^\+?1?\d{9,15}$")
+    return regex(output_to_test, r"^\+?1?\d{9,15}$")
 
 
 def contains_email(output_to_test):
-    return regex_match(
-        output_to_test, r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
-    )
+    return regex(output_to_test, r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
 
 def contains_phone_number(output_to_test):
-    return regex_match(output_to_test, r"\+?1?\d{9,15}|\(\d{3}\)\s*\d{3}[-\s]?\d{4}")
+    return regex(output_to_test, r"\+?1?\d{9,15}|\(\d{3}\)\s*\d{3}[-\s]?\d{4}")
+
+
+def is_positive_sentiment(output_to_test):
+    sentiment_grading_prompt = """
+        If the string has a positive sentiment, then the test_result is True. Otherwise, it is false.
+    """
+    return grade_using_llm(
+        output_to_test=output_to_test, eval_rubric=sentiment_grading_prompt
+    )
+
+
+def is_negative_sentiment(output_to_test):
+    sentiment_grading_prompt = """
+        If the string has a negative sentiment, then the test passed. Otherwise, the test failed.
+    """
+    return grade_using_llm(
+        output_to_test=output_to_test, eval_rubric=sentiment_grading_prompt
+    )
+
+
+def contains_pii(output_to_test):
+    sentiment_grading_prompt = """
+        If the string contains information that looks like personally identifiable information, then the test passed. Otherwise, the test failed.
+    """
+    return grade_using_llm(
+        output_to_test=output_to_test, eval_rubric=sentiment_grading_prompt
+    )
+
+
+def not_contains_pii(output_to_test):
+    sentiment_grading_prompt = """
+        If the string contains information that looks like personally identifiable information, then the test failed. Otherwise, the test passed.
+    """
+    return grade_using_llm(
+        output_to_test=output_to_test, eval_rubric=sentiment_grading_prompt
+    )
+
+
+def contains_link(output_to_test):
+    return regex(output_to_test=output_to_test, pattern=r"https?://\S+")
+
+
+def contains_valid_link(output_to_test):
+    link_match = re.search(pattern=r"https?://\S+", string=output_to_test)
+    if link_match:
+        matched_url = link_match.group()
+        if matched_url:
+            response = requests.get(matched_url)
+            if response.status_code == 200:
+                return {
+                    "result": True,
+                    "reason": f"link {matched_url} found in output and is valid",
+                }
+            else:
+                return {
+                    "result": False,
+                    "reason": f"link {matched_url} found in output but is invalid",
+                }
+    return {"result": False, "reason": f"no link found in output"}
+
+
+def length_less_than(output_to_test, max_length):
+    if len(output_to_test) < max_length:
+        return {
+            "result": True,
+            "reason": f"output length is less than {max_length} characters",
+        }
+    else:
+        return {
+            "result": False,
+            "reason": f"output length is greater than {max_length} characters",
+        }
+
+
+def length_greater_than(output_to_test, min_length):
+    if len(output_to_test) > min_length:
+        return {
+            "result": True,
+            "reason": f"output length is greater than {min_length} characters",
+        }
+    else:
+        return {
+            "result": False,
+            "reason": f"output length is less than {min_length} characters",
+        }
