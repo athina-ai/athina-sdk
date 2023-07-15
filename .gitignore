@@ -45,3 +45,4 @@ docs/_build/
 
 # Magik config file
 magik_config.json
+test_runs/*
