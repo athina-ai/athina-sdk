@@ -21,7 +21,8 @@ Eyeballing the responses from an LLM can work in development, but it’s not a g
 
 > If these sound like problems to you (today or in the future), please reach out to us at hello@magiklabs.app. We’d love to hear more!
 
-<img width="1576" alt="llm-screenshot-1" src="https://github.com/magiklabs/magik-sdk/assets/7515552/2027dbda-d725-4afa-b975-f8976bb1a1df">
+<img width="1576" alt="llm-screenshot-1" src="https://github.com/magiklabs/magik-sdk/assets/7515552/bc87aefa-505f-4732-84cd-b7fe57857850">
+
 
 <br /><br /><br />
 
@@ -60,37 +61,91 @@ Test-driven development can speed up your development very nicely, and can help 
 For example, assuming your prompt looks like this:
 
 ```
-You are an AI customer support chatbot. You are trying to help a customer named {name} who needs some information.
+Create some marketing copy for a tweet of less than {num_chars} characters for my app {name}.
 
-Answer his questions in a polite tone.
+My app helps people generate sales emails using AI. 
 
-Be as respectful as possible. Do not mention that you are an AI.
+Make sure the marketing copy contains a complete and valid link to my app. 
 
-Do not refer to the customer by any name other than {name}.
-
-Do not use his email address or customer ID number.
+Here is the link to my app: https://magiklabs.app.
 ```
 
 You can write tests like this:
 
 ```python
+from magik.evaluators import (
+    contains_none,
+    contains_link,
+    contains_valid_link,
+    not_contains_pii,
+    is_positive_sentiment,
+    length_less_than,
+    contains,
+    negate,
+)
+
+
+def is_hallucination(output):
+    return {"result": False, "reason": "Custom reason for is_hallucination"}
+
+
+# Define tests here
 tests = [
-  # Test that output does not contain restricted keywords
-  {
-      "description": "output does not contain restricted keywords",
-      "eval_function": contains_none,
-      "eval_function_args": [restricted_keywords],
-      "prompt_vars": { name: "Sara" },
-      "failure_labels": ["contains_restricted_words"],
-  },
-  # Test that output does not contain an email
-  {
-      "description": "output does not contain email",
-      "eval_function": not_contains_email,
-      "eval_function_args": [],
-      "prompt_vars": { name: "John" },
-      "failure_labels": ["contains_email", "pii_leak", "critical"],
-  }
+    {
+        # contains_link(output)
+        "description": "output contains a link",
+        "eval_function": contains_link,
+        "eval_function_args": [],
+        "prompt_vars": {
+            "name": "Uber",
+            "num_chars": 280,
+        },
+        "failure_labels": ["bad_response_format"],
+    },
+    {
+        # contains_valid_link(output)
+        "description": "output contains a valid link",
+        "eval_function": contains_valid_link,
+        "eval_function_args": [],
+        "prompt_vars": {
+            "name": "Magik",
+            "num_chars": 280,
+        },
+        "failure_labels": ["bad_response_format"],
+    },
+    {
+        # is_positive_sentiment(output)
+        "description": "output sentiment is positive",
+        "eval_function": is_positive_sentiment,
+        "eval_function_args": [],
+        "prompt_vars": {
+            "name": "Lyft",
+            "num_chars": 280,
+        },
+        "failure_labels": ["negative_sentiment"],
+    },
+    {
+        # length_less_than(output, 280)
+        "description": "output length is less than 280 characters",
+        "eval_function": length_less_than,
+        "eval_function_args": [280],
+        "prompt_vars": {
+            "name": "Facebook",
+            "num_chars": 280,
+        },
+        "failure_labels": ["negative_sentiment", "critical"],
+    },
+    {
+        # contains_all(output, ["#"])
+        "description": "output does not contain hashtags",
+        "eval_function": contains_none,
+        "eval_function_args": ["#"],
+        "prompt_vars": {
+            "name": "Datadog",
+            "num_chars": 280,
+        },
+        "failure_labels": ["bad_response_format"],
+    },
 ]
 ```
 
