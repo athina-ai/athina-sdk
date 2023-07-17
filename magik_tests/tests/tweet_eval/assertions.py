@@ -42,7 +42,7 @@ tests = [
         "eval_function": length_less_than,
         "eval_function_args": [280],
         "prompt_vars": {},
-        "failure_labels": ["negative_sentiment"],
+        "failure_labels": ["negative_sentiment", "critical"],
     },
     {
         "description": "output does not contain hashtags",

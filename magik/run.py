@@ -79,11 +79,7 @@ class Run:
                 self.saved_prompt_response = openai.openai_chat_completion_message(
                     model=model, prompt=prompt
                 )
-                prompt_response = self.saved_prompt_response
-            else:
-                prompt_response = openai.openai_chat_completion_message(
-                    model=model, prompt=prompt
-                )
+            prompt_response = self.saved_prompt_response
         else:
             prompt = substitute_vars(raw_prompt, prompt_vars)
             prompt_response = openai.openai_chat_completion_message(

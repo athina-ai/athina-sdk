@@ -9,3 +9,10 @@ def normalize_output_string(str):
 
 def substitute_vars(string, vars_dict):
     return string.format(**vars_dict)
+
+
+def standardize_url(url):
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    else:
+        return "http://" + url

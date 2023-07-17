@@ -1,0 +1,3 @@
+Give me json output of a sample "user" object with the following fields: 
+
+name, email, phone number, ssn, credit_card_info, website, linkedin url
