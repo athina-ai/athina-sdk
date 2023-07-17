@@ -3,9 +3,9 @@ import requests
 import json
 import re
 import ast
-from magik.openai_helper import OpenAI
-from magik.utils import standardize_url
-from magik.constants import OPEN_AI_DEFAULT_MODEL
+from openai_helper import OpenAI
+from utils import standardize_url
+from constants import OPEN_AI_DEFAULT_MODEL
 
 
 def generate_grading_prompt(output_to_evaluate, grading_criteria):

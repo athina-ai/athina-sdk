@@ -1,6 +1,6 @@
 import requests
-from magik.constants import API_BASE_URL
-from magik.config import get_magik_api_key
+from constants import API_BASE_URL
+from config import get_magik_api_key
 
 
 def logChatResponse(prompt_slug, prompt_sent, model, chat_completion, testId):

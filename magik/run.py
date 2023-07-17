@@ -3,12 +3,12 @@ import requests
 import sys
 import importlib.util
 from datetime import datetime
-from magik.internal_logger import logger
-from magik.utils import substitute_vars
-from magik.openai_helper import OpenAI
-from magik.sys_exec import read_from_file, create_file
-from magik.config import get_open_ai_default_model, get_magik_api_key
-from magik.constants import TESTRUNS_DIR, TEST_DIR, RUN_URL
+from internal_logger import logger
+from utils import substitute_vars
+from openai_helper import OpenAI
+from sys_exec import read_from_file, create_file
+from config import get_open_ai_default_model, get_magik_api_key
+from constants import TESTRUNS_DIR, TEST_DIR, RUN_URL
 
 
 class Run:
