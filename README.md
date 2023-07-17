@@ -5,14 +5,43 @@ _Magik is an LLM output testing SDK + observability platform that helps you writ
 
 Reliability of output is one of the biggest challenges for people trying to use LLM apps in production.<br />
 
-LLM responses are non-deterministic by nature. This makes it particularly challenging to use them for certain types of tasks:
+Since LLM outputs are non-deterministic, it’s very hard to measure how good the output is.
 
-- If you're building a AI assistant that helps answer legal questions, and you cannot afford to have hallucinations, or misinformation.
-- If you're building a code generation AI, you might need to make sure the code is correct, and works as expected.
-- If you're building a customer support agent, you might need to make it sure it responds with accurate answers in a specified format, and does not contain sensitive information like PII.
+Eyeballing the responses from an LLM can work in development, but it’s not a great solution. 
 
-We are trying to solve these problems with a **test-driven approach towards LLM observability.**
+> _In production, it’s virtually impossible to eyeball thousands of responses. Which means you have very little visibility into how well your LLM is performing._
+
+- Do you know when your LLM app is hallucinating?
+- How do you know how well it's *really* performing?
+- Do you know how often it’s producing a critically bad output?
+- How do you know what your users are seeing?
+- How do you measure how good your LLM responses are? And if you can’t measure it, how do you improve the accuracy?
+
+<br />
+
+> If these sound like problems to you (today or in the future), please reach out to us at hello@magiklabs.app. We’d love to hear more!
+
+<img width="1576" alt="llm-screenshot-1" src="https://github.com/magiklabs/magik-sdk/assets/7515552/2027dbda-d725-4afa-b975-f8976bb1a1df">
+
 <br /><br /><br />
+
+
+# Documentation
+`pip install magik`
+
+See https://docs.magiklabs.app for instructions on how to write and run tests.
+
+- [Overview](https://docs.magiklabs.app/)
+- [Quick Start](https://docs.magiklabs.app/quick-start)
+- [Writing Tests](https://docs.magiklabs.app/reference/writing-tests)
+  - [Evaluator Functions](https://docs.magiklabs.app/reference/writing-tests/evaluator-functions)
+  - [What kind of tests can I write](https://docs.magiklabs.app/reference/writing-tests/what-kind-of-tests-can-i-write)
+  - [How does the LLM grader work?](https://docs.magiklabs.app/reference/writing-tests/how-does-the-llm-grader-work)
+- [Running Tests](https://docs.magiklabs.app/reference/running-tests)
+- [Deploying Tests](https://docs.magiklabs.app/reference/deploying-tests)
+- [Logging your production data](https://docs.magiklabs.app/reference/logging-your-production-data)
+
+<br />
 
 # Use Cases
 
@@ -33,7 +62,13 @@ For example, assuming your prompt looks like this:
 ```
 You are an AI customer support chatbot. You are trying to help a customer named {name} who needs some information.
 
-Answer his questions in a polite tone. Be as respectful as possible. Do not mention that you are an AI. Do not refer to the customer by any name other than {name}. Do not use his email address or customer ID number.
+Answer his questions in a polite tone.
+
+Be as respectful as possible. Do not mention that you are an AI.
+
+Do not refer to the customer by any name other than {name}.
+
+Do not use his email address or customer ID number.
 ```
 
 You can write tests like this:
@@ -51,8 +86,8 @@ tests = [
   # Test that output does not contain an email
   {
       "description": "output does not contain email",
-      "eval_function": regex,
-      "eval_function_args": [email_matcher],
+      "eval_function": not_contains_email,
+      "eval_function_args": [],
       "prompt_vars": { name: "John" },
       "failure_labels": ["contains_email", "pii_leak", "critical"],
   }
@@ -78,6 +113,7 @@ You can use our **evaluation & monitoring platform** to:
 See https://magiklabs.app for more details, or contact us at [hello@magiklabs.app](mailto:hello@magiklabs.app)
 
 <br /><br />
+
 
 ### Upcoming Features
 
