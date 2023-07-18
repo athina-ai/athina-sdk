@@ -7,80 +7,76 @@ from deploy import deploy_test
 from internal_logger import logger
 from run import Run
 
-commands = [
-    "init",
-    "generate",
-    "run",
-    "deploy",
-]
-
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate, run, and deploy unit tests for your AI app"
+        prog="magik", description="Magik testing suite CLI tool"
     )
-    parser.add_argument("cmd", help="Command to execute")
-    parser.add_argument("test_name", nargs="?", help="Name of the test (optional)")
-    parser.add_argument(
-        "--prod", action="store_true", help="Flag for production environment"
+
+    subparsers = parser.add_subparsers(title="commands", dest="command")
+
+    # magik init
+    parser_init = subparsers.add_parser("init", help="Initialize magik testing suite")
+    parser_init.set_defaults(func=init)
+
+    # magik generate <test-name>
+    parser_generate = subparsers.add_parser("generate", help="Generate a new test")
+    parser_generate.add_argument("test_name", help="Name of the test")
+    parser_generate.set_defaults(func=generate)
+
+    # magik run <test-name>
+    parser_run = subparsers.add_parser("run", help="Run a test")
+    parser_run.add_argument("test_name", help="Name of the test")
+    parser_run.set_defaults(func=run)
+
+    # magik deploy <test-name>
+    parser_deploy = subparsers.add_parser("deploy", help="Deploy a test")
+    parser_deploy.add_argument("test_name", help="Name of the test")
+    parser_deploy.set_defaults(func=deploy)
+
+    # magik run_prod --prod --test <test-name> --prompt <prompt-slug> --start_date <start-date> --end_date <end_date>
+    parser_run_production = subparsers.add_parser(
+        "run_prod", help="Run a test in production"
     )
-    parser.add_argument("--start_date", help="Start date (optional)")
-    parser.add_argument("--end_date", help="End date (optional)")
-    parser.add_argument("--prompt_slug", help="Prompt slug (optional)")
+    parser_run_production.add_argument(
+        "--test", dest="test_name", help="Name of the test", required=False, default="*"
+    )
+    parser_run_production.add_argument(
+        "--prompt", dest="prompt_slug", help="Slug of the prompt", required=True
+    )
+    parser_run_production.add_argument("--start_date", help="Start date of the test")
+    parser_run_production.add_argument("--end_date", help="End date of the test")
+    parser_run_production.set_defaults(func=run_prod)
 
     args = parser.parse_args()
-    cmd = args.cmd
-    test_name = args.test_name
-    is_production = args.prod if hasattr(args, "prod") else False
-    start_date = args.start_date
-    end_date = args.end_date
-    prompt_slug = args.prompt_slug
+    args.func(args)
 
-    if not cmd:
-        logger.error("Missing command")
-        return
 
-    if cmd not in commands:
-        logger.error(f"Error: Command '{cmd}' not found")
-        return
+def init(args):
+    initialize()
 
-    if (cmd in ["generate", "deploy"]) and not test_name:
-        logger.info(
-            f"Please provide a test_name argument as well.\n\nUsage: magik {cmd} <test_name>"
-        )
-        return
 
-    if cmd == "init":
-        initialize()
-        return
+def generate(args):
+    generate_test(args.test_name)
 
-    if cmd == "generate":
-        generate_test(test_name)
-        return
 
-    if cmd == "run" and not is_production:
-        test_runner = Run()
-        test_runner.run_tests(test_name)
-        return
+def run(args):
+    test_runner = Run()
+    test_runner.run_tests(args.test_name)
 
-    if cmd == "run" and is_production:
-        if not start_date or not end_date:
-            logger.info(
-                f"Please provide a start_date and end_date argument as well.\n\nUsage: magik run <test_name> --prod --start_date <start_date> --end_date <end_date>"
-            )
-            return
 
-        test_runner = Run()
-        test_runner.run_tests_in_prod(
-            start_date=start_date,
-            end_date=end_date,
-            prompt_slug=prompt_slug,
-        )
-        return
+def deploy(args):
+    deploy_test(args.test_name)
 
-    if cmd == "deploy":
-        deploy_test(test_name)
-        return
+
+def run_prod(args):
+    test_runner = Run()
+    test_runner.run_tests_in_prod(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        prompt_slug=args.prompt_slug,
+        test_slug=args.test_name,
+    )
 
 
 if __name__ == "__main__":

@@ -39,7 +39,7 @@ tests = [
     {
         "description": "output contains important keywords",
         "eval_function": contains_all,
-        "eval_function_args": ["Bonjour", "Monde"],
+        "eval_function_args": [["Bonjour", "Monde"]],
         "prompt_vars": {
             "text_to_translate": "Hello world"  # These will only be used for the prompt in development mode
         },

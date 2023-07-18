@@ -23,21 +23,32 @@ class Run:
             test_name, tests, raw_prompt, log_file_path=log_file_path
         )
 
-    def run_tests_in_prod(self, start_date, end_date, prompt_slug):
+    def run_tests_in_prod(self, start_date, end_date, prompt_slug, test_slug):
         request_data = {
             "source": "CLI",
-            "startDate": start_date,
-            "endDate": end_date,
-            "promptSlug": prompt_slug,
+            "start_date": start_date,
+            "end_date": end_date,
+            "prompt_tests": [
+                {
+                    "prompt_slug": prompt_slug,
+                    "test_slugs": "*" if test_slug == "*" else test_slug.split(","),
+                }
+            ],
         }
-        logger.info(f"Sending request to {RUN_URL} with data: {request_data}\n")
-        requests.post(
+        # Remove None fields from the payload
+        payload = {k: v for k, v in request_data.items() if v is not None}
+
+        logger.debug(f"Sending request to {RUN_URL} with data: {request_data}\n")
+        response = requests.post(
             RUN_URL,
-            json=request_data,
+            json=payload,
             headers={
                 "magik-api-key": get_magik_api_key(),
             },
         )
+        if response.status_code != 200:
+            logger.error(f"ERROR: Failed to trigger test in prod: {response.text}")
+            return
 
     def _run_tests_for_prompt(self, test_name, tests, raw_prompt, log_file_path):
         self._log_to_file_and_console("---------------")
