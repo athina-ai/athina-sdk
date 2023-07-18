@@ -91,10 +91,10 @@ def contains_none(keywords, case_sensitive=False, output_to_test=None):
 
 @magik_eval
 def negate(eval_function, output_to_test=None, *args, **kwargs):
-    eval_result = eval_function(output_to_test, *args, **kwargs)
+    eval_result = eval_function(output_to_test=output_to_test, *args, **kwargs)
     return {
         "result": not eval_result["result"],
-        "reason": f"{eval_function.__name__} returned {eval_result['result']} with reason {eval_result['reason']}",
+        "reason": f"Negated function {eval_function.__name__} returned {eval_result['result']} with reason '{eval_result['reason']}'",
     }
 
 
