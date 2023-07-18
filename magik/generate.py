@@ -1,7 +1,7 @@
-from internal_logger import logger
-from constants import TEST_DIR
-from sys_exec import read_from_file, write_to_file
-from constants import EXAMPLES_DIR
+from magik.internal_logger import logger
+from magik.constants import TEST_DIR
+from magik.sys_exec import read_from_file, write_to_file
+from magik.constants import EXAMPLES_DIR
 import inspect
 
 

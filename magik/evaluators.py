@@ -3,46 +3,14 @@ import requests
 import json
 import re
 import ast
-from openai_helper import OpenAI
-from utils import standardize_url
-from constants import OPEN_AI_DEFAULT_MODEL
+from magik.openai_helper import OpenAI
+from magik.utils import standardize_url, generate_grading_prompt
+from magik.constants import OPEN_AI_DEFAULT_MODEL
+from magik.decorators import magik_eval
 
 
-def generate_grading_prompt(output_to_evaluate, grading_criteria):
-    return (
-        """
-    You are grading a response string according to a grading criteria given to you.
-    
-    If the gradient criteria is true, then the test_result is True. Otherwise, it is false.
-    
-    Explain the reason for the test_result in the reason field.
-    
-    Respond with a python dictionary object that looks like this:
-    {test_result: boolean; reason: string;}
-    
-    Examples:
-
-    String: Qui est le président des États-Unis?
-    Grading Criteria: Contains the french words for 'president' and 'United States'
-    {"test_result": True, "reason": "the content contains the word 'world'"}
-
-    String: Earth is the second planet from the sun.
-    Grading Criteria: If the fact is true, then the test_result is True. Otherwise, it is false.
-    {"test_result": False, "reason": "The string is factually inaccurate - Earth is actually the third planet from the sun."}`
-    """
-        + f"""
-        String: {output_to_evaluate}
-        Grading Criteria: {grading_criteria}
-    """
-    )
-
-
-# Define the evaluation functions
-def equals(
-    output_to_test,
-    expected_output,
-    case_sensitive=False,
-):
+@magik_eval
+def equals(expected_output, case_sensitive=False, output_to_test=None):
     if case_sensitive == False:
         output_to_test = output_to_test.lower()
         expected_output = expected_output.lower()
@@ -55,7 +23,8 @@ def equals(
     return {"result": result, "reason": reason}
 
 
-def contains_all(output_to_test, keywords, case_sensitive=False):
+@magik_eval
+def contains_all(keywords, case_sensitive=False, output_to_test=None):
     if case_sensitive == False:
         output_to_test = output_to_test.lower()
         keywords = list(map(lambda k: k.lower(), keywords))
@@ -74,7 +43,8 @@ def contains_all(output_to_test, keywords, case_sensitive=False):
     return {"result": result, "reason": reason}
 
 
-def contains_any(output_to_test, keywords, case_sensitive=False):
+@magik_eval
+def contains_any(keywords, case_sensitive=False, output_to_test=None):
     if not case_sensitive:
         output_to_test = output_to_test.lower()
         keywords = list(map(lambda k: k.lower(), keywords))
@@ -96,7 +66,8 @@ def contains_any(output_to_test, keywords, case_sensitive=False):
     return {"result": result, "reason": reason}
 
 
-def contains_none(output_to_test, keywords, case_sensitive=False):
+@magik_eval
+def contains_none(keywords, case_sensitive=False, output_to_test=None):
     if not case_sensitive:
         output_to_test = output_to_test.lower()
         keywords = list(map(lambda k: k.lower(), keywords))
@@ -118,7 +89,8 @@ def contains_none(output_to_test, keywords, case_sensitive=False):
     return {"result": result, "reason": reason}
 
 
-def negate(output_to_test, eval_function, *args, **kwargs):
+@magik_eval
+def negate(eval_function, output_to_test=None, *args, **kwargs):
     eval_result = eval_function(output_to_test, *args, **kwargs)
     return {
         "result": not eval_result["result"],
@@ -126,7 +98,8 @@ def negate(output_to_test, eval_function, *args, **kwargs):
     }
 
 
-def contains(output_to_test, keyword, case_sensitive=False):
+@magik_eval
+def contains(keyword, case_sensitive=False, output_to_test=None):
     if case_sensitive == False:
         output_to_test = output_to_test.lower()
         keyword = keyword.lower()
@@ -140,7 +113,8 @@ def contains(output_to_test, keyword, case_sensitive=False):
     return {"result": result, "reason": reason}
 
 
-def regex(output_to_test, pattern):
+@magik_eval
+def regex(pattern, output_to_test=None):
     match = re.search(pattern, output_to_test)
     if match:
         return {"result": True, "reason": f"regex pattern {pattern} found in output"}
@@ -151,7 +125,8 @@ def regex(output_to_test, pattern):
         }
 
 
-def starts_with(output_to_test, substring, case_sensitive=False):
+@magik_eval
+def starts_with(substring, case_sensitive=False, output_to_test=None):
     if case_sensitive == False:
         output_to_test = output_to_test.lower()
         substring = substring.lower()
@@ -162,7 +137,8 @@ def starts_with(output_to_test, substring, case_sensitive=False):
         return {"result": result, "reason": "output does not start with " + substring}
 
 
-def ends_with(output_to_test, substring, case_sensitive=False):
+@magik_eval
+def ends_with(substring, case_sensitive=False, output_to_test=None):
     if case_sensitive == False:
         output_to_test = output_to_test.lower()
         substring = substring.lower()
@@ -173,7 +149,8 @@ def ends_with(output_to_test, substring, case_sensitive=False):
         return {"result": result, "reason": "output does not end with " + substring}
 
 
-def grade_using_llm(output_to_test, eval_rubric):
+@magik_eval
+def grade_using_llm(eval_rubric, output_to_test=None):
     openai = OpenAI()
     # eval_rubric is a string that contains the rubric by which to evaluate the output
     evaluation_prompt = generate_grading_prompt(output_to_test, eval_rubric)
@@ -195,65 +172,67 @@ def grade_using_llm(output_to_test, eval_rubric):
     return {"result": result, "reason": reason}
 
 
-def is_email(output_to_test):
-    return regex(output_to_test, r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+@magik_eval
+def is_email(output_to_test=None):
+    return regex(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")(output_to_test)
 
 
-def is_phone_number(output_to_test):
-    return regex(output_to_test, r"^\+?1?\d{9,15}$")
-
-
-# Generated by chatGPT (regex might need some work)
-def contains_email(output_to_test):
-    return regex(output_to_test, r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
+@magik_eval
+def is_phone_number(output_to_test=None):
+    return regex(r"^\+?1?\d{9,15}$")(output_to_test)
 
 
 # Generated by chatGPT (regex might need some work)
-def contains_phone_number(output_to_test):
+@magik_eval
+def contains_email(output_to_test=None):
+    return regex(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")(output_to_test)
+
+
+# Generated by chatGPT (regex might need some work)
+@magik_eval
+def contains_phone_number(output_to_test=None):
     pattern = r"\+?\d{1,3}[-\s]?\(?\d{3}\)?[-\s]?\d{3}[-\s]?\d{2,4}|\(\d{3}\)\s?\d{3}[-\s]?\d{4}"
-    return regex(output_to_test, pattern)
+    return regex(pattern)(output_to_test)
 
 
 # Placeholder function to be replaced by an actual sentiment score function
-def is_positive_sentiment(output_to_test):
+@magik_eval
+def is_positive_sentiment(output_to_test=None):
     sentiment_grading_prompt = """
         If the string has a positive sentiment, then the test_result is True. Otherwise, it is false.
     """
-    return grade_using_llm(
-        output_to_test=output_to_test, eval_rubric=sentiment_grading_prompt
-    )
+    return grade_using_llm(sentiment_grading_prompt)(output_to_test)
 
 
 # Placeholder function to be replaced by an actual sentiment score function
-def is_negative_sentiment(output_to_test):
+@magik_eval
+def is_negative_sentiment(output_to_test=None):
     sentiment_grading_prompt = """
         If the string has a negative sentiment, then the test passed. Otherwise, the test failed.
     """
-    return grade_using_llm(
-        output_to_test=output_to_test, eval_rubric=sentiment_grading_prompt
-    )
+    return grade_using_llm(sentiment_grading_prompt)(output_to_test)
 
 
-def contains_pii(output_to_test):
+@magik_eval
+def contains_pii(output_to_test=None):
     sentiment_grading_prompt = """
         If the string contains information that looks like personally identifiable information, then the test passed. Otherwise, the test failed.
     """
-    return grade_using_llm(
-        output_to_test=output_to_test, eval_rubric=sentiment_grading_prompt
-    )
+    return grade_using_llm(sentiment_grading_prompt)(output_to_test)
 
 
-def not_contains_pii(output_to_test):
+@magik_eval
+def not_contains_pii(output_to_test=None):
     sentiment_grading_prompt = """
         If the string contains information that looks like personally identifiable information, then the test failed. Otherwise, the test passed.
     """
-    return grade_using_llm(
-        output_to_test=output_to_test, eval_rubric=sentiment_grading_prompt
-    )
+    return grade_using_llm(sentiment_grading_prompt)(output_to_test)
 
 
-def contains_link(output_to_test):
+@magik_eval
+def contains_link(output_to_test=None):
     pattern = r"(?!.*@)(?:https?://)?(?:www\.)?\S+\.\S+"
+    print("output_to_test", output_to_test)
     result = bool(re.search(pattern, output_to_test))
     if result:
         return {"result": True, "reason": "Link found in output"}
@@ -261,7 +240,8 @@ def contains_link(output_to_test):
         return {"result": False, "reason": "No link found in output"}
 
 
-def contains_valid_link(output_to_test):
+@magik_eval
+def contains_valid_link(output_to_test=None):
     pattern = r"(?!.*@)(?:https?://)?(?:www\.)?\S+\.\S+"
     link_match = re.search(pattern=pattern, string=output_to_test)
     if link_match:
@@ -288,7 +268,8 @@ def contains_valid_link(output_to_test):
     return {"result": False, "reason": f"no link found in output"}
 
 
-def contains_credit_card_number(output_to_test):
+@magik_eval
+def contains_credit_card_number(output_to_test=None):
     pattern = r"\b(?:\d[ -]*?){13,16}\b"
     result = bool(re.search(pattern, output_to_test))
     if result:
@@ -297,7 +278,8 @@ def contains_credit_card_number(output_to_test):
         return {"result": False, "reason": f"no credit card number found in output"}
 
 
-def length_less_than(output_to_test, max_length):
+@magik_eval
+def length_less_than(max_length, output_to_test=None):
     if len(output_to_test) < max_length:
         return {
             "result": True,
@@ -310,7 +292,8 @@ def length_less_than(output_to_test, max_length):
         }
 
 
-def length_greater_than(output_to_test, min_length):
+@magik_eval
+def length_greater_than(min_length, output_to_test=None):
     if len(output_to_test) > min_length:
         return {
             "result": True,
@@ -323,7 +306,8 @@ def length_greater_than(output_to_test, min_length):
         }
 
 
-def is_json(output_to_test):
+@magik_eval
+def is_json(output_to_test=None):
     try:
         json.loads(output_to_test)
         return {
@@ -337,7 +321,8 @@ def is_json(output_to_test):
         }
 
 
-def contains_json(output_to_test):
+@magik_eval
+def contains_json(output_to_test=None):
     trimmed_output = output_to_test.strip()
     pattern = r"^\{.*\}$|^\[.*\]$"
     result = bool(re.search(pattern, trimmed_output, re.DOTALL))

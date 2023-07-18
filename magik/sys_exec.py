@@ -2,7 +2,7 @@ import asyncio
 import os
 import json
 import subprocess
-from internal_logger import logger
+from magik.internal_logger import logger
 
 
 def execute_command(command, confirm=True, log=True):

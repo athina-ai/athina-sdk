@@ -3,12 +3,12 @@ import requests
 import sys
 import importlib.util
 from datetime import datetime
-from internal_logger import logger
-from utils import substitute_vars
-from openai_helper import OpenAI
-from sys_exec import read_from_file, create_file
-from config import get_open_ai_default_model, get_magik_api_key
-from constants import TESTRUNS_DIR, TEST_DIR, RUN_URL
+from magik.internal_logger import logger
+from magik.utils import substitute_vars
+from magik.openai_helper import OpenAI
+from magik.sys_exec import read_from_file, create_file
+from magik.config import get_open_ai_default_model, get_magik_api_key
+from magik.constants import TESTRUNS_DIR, TEST_DIR, RUN_URL
 
 
 class Run:
@@ -104,9 +104,7 @@ class Run:
     def _run_individual_test_for_prompt_response(
         self, test_name, test, prompt, prompt_response, log_file_path
     ):
-        test_function_result_obj = test["eval_function"](
-            prompt_response, *test["eval_function_args"]
-        )
+        test_function_result_obj = test["eval"](prompt_response)
         result_obj = self._generate_result_object(
             test=test,
             test_result=test_function_result_obj,
@@ -146,11 +144,11 @@ class Run:
     def _generate_result_object(self, test, test_result, prompt, prompt_response):
         did_test_pass = test_result["result"]
         failure_labels = test["failure_labels"] if not did_test_pass else []
-        test_function_name = test["eval_function"].__name__
+        test_function_name = test["eval"].__name__
         return {
             "test": {
                 **test,
-                "eval_function": test_function_name,
+                "eval": test_function_name,
             },
             "test_result": test_result,
             "prompt": prompt,

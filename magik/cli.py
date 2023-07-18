@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-from initialize import initialize
-from generate import generate_test
-from deploy import deploy_test
-from internal_logger import logger
-from run import Run
+from magik.initialize import initialize
+from magik.generate import generate_test
+from magik.deploy import deploy_test
+from magik.internal_logger import logger
+from magik.run import Run
 
 
 def main():

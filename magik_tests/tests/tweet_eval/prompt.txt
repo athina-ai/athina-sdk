@@ -1,4 +1,4 @@
-Create some marketing copy of less than {num_chars} characters for my app {name}.
+Create some marketing copy of less than 280 characters for my app Magik.
 
 My app helps people generate sales emails using AI. 
 
