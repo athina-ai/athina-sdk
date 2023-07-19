@@ -1,7 +1,7 @@
-from internal_logger import logger
-from constants import TEST_DIR
-from sys_exec import read_from_file, write_to_file
-from constants import EXAMPLES_DIR
+from magik.internal_logger import logger
+from magik.constants import TEST_DIR
+from magik.sys_exec import read_from_file, write_to_file
+from magik.constants import EXAMPLES_DIR
 import inspect
 
 
@@ -15,7 +15,9 @@ def _get_module_file_path(file_name):
 
 
 def _generate_example_prompt(test_path):
-    example_prompt = "Translate this text from English to French: {text_to_translate}"
+    example_prompt = (
+        "Write a tweet about my new app named {app_name}. Make sure to include a link."
+    )
     write_to_file(f"{test_path}/prompt.txt", example_prompt)
 
 

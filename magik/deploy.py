@@ -1,8 +1,8 @@
 import os
 import requests
-from internal_logger import logger
-from constants import CONFIG_FILE_PATH, DEPLOY_URL, TEST_DIR
-from config import get_magik_api_key
+from magik.internal_logger import logger
+from magik.constants import CONFIG_FILE_PATH, DEPLOY_URL, TEST_DIR
+from magik.config import get_magik_api_key
 
 
 def deploy_test(test_name: str):

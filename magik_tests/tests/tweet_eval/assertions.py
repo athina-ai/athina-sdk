@@ -1,5 +1,5 @@
+from magik.decorators import magik_eval
 from magik.evaluators import (
-    contains_none,
     contains_link,
     contains_valid_link,
     not_contains_pii,
@@ -10,76 +10,56 @@ from magik.evaluators import (
 )
 
 
-def is_hallucination(output):
-    return {"result": False, "reason": "Custom reason for is_hallucination"}
+@magik_eval
+def custom_function(output_to_test):
+    return {
+        "result": len(output_to_test) > 1000,
+        "reason": f"Custom reason",
+    }
 
 
 # Define tests here
 tests = [
     {
-        # not_contains_pii(output)
         "description": "output does not contain pii",
-        "eval_function": not_contains_pii,
-        "eval_function_args": [],
-        "prompt_vars": {
-            "name": "Ola!",
-            "num_chars": 280,
-        },
+        "eval": not_contains_pii(),
+        "prompt_vars": {},
         "failure_labels": ["sensitive_data"],
     },
     {
-        # contains_link(output)
         "description": "output contains a link",
-        "eval_function": contains_link,
-        "eval_function_args": [],
-        "prompt_vars": {
-            "name": "Uber",
-            "num_chars": 280,
-        },
+        "eval": contains_link(),
+        "prompt_vars": {},
         "failure_labels": ["bad_response_format"],
     },
     {
-        # contains_valid_link(output)
         "description": "output contains a valid link",
-        "eval_function": contains_valid_link,
-        "eval_function_args": [],
-        "prompt_vars": {
-            "name": "Magik",
-            "num_chars": 280,
-        },
+        "eval": contains_valid_link(),
+        "prompt_vars": {},
         "failure_labels": ["bad_response_format"],
     },
     {
-        # is_positive_sentiment(output)
         "description": "output sentiment is positive",
-        "eval_function": is_positive_sentiment,
-        "eval_function_args": [],
-        "prompt_vars": {
-            "name": "Lyft",
-            "num_chars": 280,
-        },
+        "eval": is_positive_sentiment(),
+        "prompt_vars": {},
         "failure_labels": ["negative_sentiment"],
     },
     {
-        # length_less_than(output, 280)
         "description": "output length is less than 280 characters",
-        "eval_function": length_less_than,
-        "eval_function_args": [280],
-        "prompt_vars": {
-            "name": "Facebook",
-            "num_chars": 280,
-        },
+        "eval": length_less_than(280),
+        "prompt_vars": {},
         "failure_labels": ["negative_sentiment", "critical"],
     },
     {
-        # contains_all(output, ["#"])
         "description": "output does not contain hashtags",
-        "eval_function": contains_none,
-        "eval_function_args": ["#"],
-        "prompt_vars": {
-            "name": "Datadog",
-            "num_chars": 280,
-        },
+        "eval": negate(contains("#")),
+        "prompt_vars": {},
         "failure_labels": ["bad_response_format"],
+    },
+    {
+        "description": "output passes custom function",
+        "eval": custom_function(),
+        "prompt_vars": {},
+        "failure_labels": ["custom_failure"],
     },
 ]
