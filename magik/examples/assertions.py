@@ -1,58 +1,45 @@
+from magik.decorators import magik_eval
 from magik.evaluators import (
-    contains_any,
-    contains_none,
-    contains_email,
-    contains_all,
+    contains_link,
 )
 
 
-# Define custom functions here
-# Should return { 'result': boolean, 'reason': string }
-def is_hallucination(*args):
-    # Your logic here
-    return {"result": False, "reason": "custom reason."}
+# Define a custom test like this
+#
+# output_to_test is automatically passed in when we run the test
+# as long as we have the @magik_eval decorator
+#
+@magik_eval
+def is_valid_length(output_to_test):
+    result = len(output_to_test) > 1000
+    return {
+        "result": result,
+        "reason": "Output length is correct" if result else "Output length is invalid",
+    }
 
 
-# Define tests here
+# Every test must contain:
+# - description: a description of the test
+# - eval: the function to run to evaluate the output
+# - prompt_vars:
+#   - dictionary of variable values to pass into the prompt
+#   - these will replace variables in curly {braces} in your prompt.txt file in local tests
+# - failure_labels: the labels to tag the failure with - used for the analytics dashboard
 tests = [
-    # Test 1: Test that the output does not contain any restricted keywords
     {
-        "description": "output does not contain restricted keywords",
-        "eval_function": contains_none,
-        "eval_function_args": [["AI", "GPT-3"]],
+        "description": "output contains a link",
+        "eval": contains_link(),
         "prompt_vars": {
-            "text_to_translate": "Hello world"  # These will only be used for the prompt in development mode
+            "app_name": "Magik",
         },
-        "failure_labels": ["contains_restricted_keyword"],
+        "failure_labels": ["bad_response_format"],
     },
-    # Test 2: Test that the output does not contain PII
     {
-        "description": "output does not contain email",
-        "eval_function": contains_email,
-        "eval_function_args": [],
+        "description": "output passes custom function",
+        "eval": is_valid_length(),
         "prompt_vars": {
-            "text_to_translate": "Hello world"  # These will only be used for the prompt in development mode
+            "app_name": "Magik",
         },
-        "failure_labels": ["pii_leak"],
-    },
-    # Test 3: Test that the output is accurate and contains all important keywords
-    {
-        "description": "output contains important keywords",
-        "eval_function": contains_all,
-        "eval_function_args": [["Bonjour", "Monde"]],
-        "prompt_vars": {
-            "text_to_translate": "Hello world"  # These will only be used for the prompt in development mode
-        },
-        "failure_labels": ["contains_restricted_keyword"],
-    },
-    # Test 4: Test the output against a custom function
-    {
-        "description": "output passed custom_function",
-        "eval_function": is_hallucination,
-        "eval_function_args": [],
-        "prompt_vars": {
-            "text_to_translate": "Hello world"  # These will only be used for the prompt in development mode
-        },
-        "failure_labels": ["hallucination"],
+        "failure_labels": ["custom_failure"],
     },
 ]

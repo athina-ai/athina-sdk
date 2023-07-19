@@ -9,19 +9,19 @@ from magik.evaluators import (
 tests = [
     {
         "description": "output contains any of the keywords",
-        "eval": contains_any(["bonjour", "salut", "coucou"]),
+        "eval": 'contains_any(["bonjour", "salut", "coucou"])',
         "prompt_vars": {"text_to_translate": "Hello World"},
         "failure_labels": ["inaccurate"],
     },
     {
         "description": "output contains all of the keywords",
-        "eval": contains_all(["bonjour", "monde"], case_sensitive=False),
+        "eval": 'contains_all(["bonjour", "monde"], case_sensitive=False)',
         "prompt_vars": {"text_to_translate": "Hello World"},
         "failure_labels": ["inaccurate"],
     },
     {
         "description": "output is a question - ends with a question mark",
-        "eval": ends_with("?"),
+        "eval": 'ends_with("?")',
         "prompt_vars": {
             "text_to_translate": "Who is the president of the united states?"
         },
@@ -29,7 +29,7 @@ tests = [
     },
     {
         "description": "output is a question - ends with a question mark",
-        "eval": negate(ends_with("?")),
+        "eval": 'negate(ends_with("?"))',
         "prompt_vars": {
             "text_to_translate": "Who is the president of the united states?"
         },
