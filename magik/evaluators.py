@@ -3,10 +3,13 @@ import requests
 import json
 import re
 import ast
+import numpy as np
 from magik.openai_helper import OpenAI
 from magik.utils import standardize_url, generate_grading_prompt
 from magik.constants import OPEN_AI_DEFAULT_MODEL
 from magik.decorators import magik_eval
+from magik.similarity import similarity_score
+from magik.classifier import classify_output
 
 
 @magik_eval
@@ -336,3 +339,56 @@ def contains_json(output_to_test=None):
             "result": False,
             "reason": "Output does not contain JSON",
         }
+
+
+@magik_eval
+def cosine_similarity_above_threshold(
+    compare_against: str,
+    threshold: float,
+    model="text-embedding-ada-002",
+    output_to_test=None,
+):
+    score = similarity_score(output_to_test, compare_against, model)
+    print(f"score is {score}")
+    result = score > threshold
+    return {
+        "result": result,
+        "reason": f"cosine similarity score is {score} and is above threshold {threshold}",
+    }
+
+
+@magik_eval
+def cosine_similarity_below_threshold(
+    compare_against: str,
+    threshold: float,
+    model="text-embedding-ada-002",
+    output_to_test=None,
+):
+    score = similarity_score(output_to_test, compare_against, model)
+    print(f"score is {score}")
+    result = score < threshold
+    return {
+        "result": result,
+        "reason": f"cosine similarity score is {score} and is below threshold {threshold}",
+    }
+
+
+@magik_eval
+def matches_desired_classification(
+    classification_labels_and_descriptions: list[dict],
+    input_description: str,
+    task_description: str,
+    desired_classification_label: str,
+    output_to_test=None,
+):
+    label = classify_output(
+        classification_labels_and_descriptions=classification_labels_and_descriptions,
+        input_description=input_description,
+        task_description=task_description,
+        output_to_test=output_to_test,
+    )
+    result = label == desired_classification_label
+    return {
+        "result": result,
+        "reason": f"output is classified as {label} and desired classification is {desired_classification_label}",
+    }

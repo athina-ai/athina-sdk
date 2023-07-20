@@ -29,3 +29,8 @@ class OpenAI:
         """
         response = self.openai_chat_completion(model, prompt)
         return response.choices[0].message.content
+
+    def get_embedding(self, text: str, model="text-embedding-ada-002") -> list[float]:
+        return self.openai.Embedding.create(input=[text], model=model)["data"][0][
+            "embedding"
+        ]
