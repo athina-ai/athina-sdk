@@ -392,3 +392,21 @@ def matches_desired_classification(
         "result": result,
         "reason": f"output is classified as {label} and desired classification is {desired_classification_label}",
     }
+
+
+@magik_eval
+def api_call(
+    url: str,
+    payload: dict,
+    headers: dict = None,
+    output_to_test=None,
+):
+    payload["output_to_test"] = output_to_test
+    response = requests.post(url, json=payload, headers=headers)
+    result = response.json().get("result")
+    reason = response.json().get("reason")
+
+    return {
+        "result": result,
+        "reason": reason,
+    }
