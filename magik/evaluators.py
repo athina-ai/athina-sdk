@@ -349,7 +349,6 @@ def cosine_similarity_above_threshold(
     output_to_test=None,
 ):
     score = similarity_score(output_to_test, compare_against, model)
-    print(f"score is {score}")
     result = score > threshold
     return {
         "result": result,
@@ -365,7 +364,6 @@ def cosine_similarity_below_threshold(
     output_to_test=None,
 ):
     score = similarity_score(output_to_test, compare_against, model)
-    print(f"score is {score}")
     result = score < threshold
     return {
         "result": result,

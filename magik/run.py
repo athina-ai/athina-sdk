@@ -20,7 +20,7 @@ class Run:
         raw_prompt = self._load_prompt(test_name)
         log_file_path = self._log_file_path(test_name)
         self._run_tests_for_prompt(
-            test_name, tests, raw_prompt, log_file_path=log_file_path
+            tests=tests, raw_prompt=raw_prompt, log_file_path=log_file_path
         )
 
     def run_tests_in_prod(self, start_date, end_date, prompt_slug, test_slug):
@@ -50,7 +50,7 @@ class Run:
             logger.error(f"ERROR: Failed to trigger test in prod: {response.text}")
             return
 
-    def _run_tests_for_prompt(self, test_name, tests, raw_prompt, log_file_path):
+    def _run_tests_for_prompt(self, tests, raw_prompt, log_file_path):
         self._log_to_file_and_console("---------------")
         self._log_to_file_and_console("TEST RESULTS")
         self._log_to_file_and_console("---------------")
@@ -59,7 +59,7 @@ class Run:
         num_tests_passed = 0
         for test in tests:
             test_result = self._run_individual_test_for_prompt(
-                test_name, test, raw_prompt, log_file_path
+                test=test, raw_prompt=raw_prompt, log_file_path=log_file_path
             )
             if test_result:
                 num_tests_passed += 1
@@ -78,9 +78,7 @@ class Run:
             """
             )
 
-    def _run_individual_test_for_prompt(
-        self, test_name, test, raw_prompt, log_file_path
-    ):
+    def _run_individual_test_for_prompt(self, test, raw_prompt, log_file_path):
         openai = OpenAI()
         prompt_vars = test["prompt_vars"]
         model = get_open_ai_default_model()
@@ -98,11 +96,14 @@ class Run:
             )
 
         return self._run_individual_test_for_prompt_response(
-            test_name, test, prompt, prompt_response, log_file_path=log_file_path
+            test=test,
+            prompt=prompt,
+            prompt_response=prompt_response,
+            log_file_path=log_file_path,
         )
 
     def _run_individual_test_for_prompt_response(
-        self, test_name, test, prompt, prompt_response, log_file_path
+        self, test, prompt, prompt_response, log_file_path
     ):
         test_function_result_obj = test["eval"](prompt_response)
         result_obj = self._generate_result_object(
