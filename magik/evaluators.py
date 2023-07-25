@@ -235,7 +235,6 @@ def not_contains_pii(output_to_test=None):
 @magik_eval
 def contains_link(output_to_test=None):
     pattern = r"(?!.*@)(?:https?://)?(?:www\.)?\S+\.\S+"
-    print("output_to_test", output_to_test)
     result = bool(re.search(pattern, output_to_test))
     if result:
         return {"result": True, "reason": "Link found in output"}

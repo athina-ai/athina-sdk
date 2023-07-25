@@ -23,9 +23,6 @@ def _cosine_similarity_from_embeddings(e1: list[float], e2: list[float]) -> floa
 
 def similarity_score(str1, str2, model):
     openai = OpenAI()
-    # print(f"str1: {str1}")
-    # print(f"str2: {str2}")
-    # return 0.6
     e1 = openai.get_embedding(str1, model=model)
     e2 = openai.get_embedding(str2, model=model)
     score = _cosine_similarity_from_embeddings(e1, e2)

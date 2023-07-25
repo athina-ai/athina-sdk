@@ -21,7 +21,7 @@ class Run:
         test_context = self._load_context(test_name)
         tests = self._load_tests(test_name, test_context=test_context)
         raw_prompt = self._load_prompt(test_name)
-        log_file_path = self._log_file_path(test_name)
+        log_file_path = self._log_file_path()
         self._run_tests_for_prompt(
             tests=tests, raw_prompt=raw_prompt, log_file_path=log_file_path
         )
@@ -159,15 +159,18 @@ class Run:
         define_tests_fn = self._load_define_tests_fn(test_name)
         return define_tests_fn(test_context)
 
+    def _generate_test_object(self, test):
+        test_function_name = test["eval"].__name__
+        return {
+            **test,
+            "eval": test_function_name,
+        }
+
     def _generate_result_object(self, test, test_result, prompt, prompt_response):
         did_test_pass = test_result["result"]
         failure_labels = test["failure_labels"] if not did_test_pass else []
-        test_function_name = test["eval"].__name__
         return {
-            "test": {
-                **test,
-                "eval": test_function_name,
-            },
+            "test": self._generate_test_object(test),
             "test_result": test_result,
             "prompt": prompt,
             "prompt_response": prompt_response,
@@ -219,8 +222,6 @@ class Run:
         self._log_to_file_and_console(f"Failure Labels: {failure_labels}", log_file)
         self._log_to_file_and_console("\n", log_file)
 
-    def _log_file_path(self, test_name):
-        current_timestamp = datetime.now()
-        formatted_timestamp = current_timestamp.strftime("%Y-%m-%d_%H-%M-%S")
-        log_file_path = f"{self.test_runs_dir}/{test_name}/{formatted_timestamp}.txt"
+    def _log_file_path(self):
+        log_file_path = f"{self.test_runs_dir}/log.txt"
         return log_file_path
