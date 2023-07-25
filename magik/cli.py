@@ -5,6 +5,7 @@ from magik.initialize import initialize
 from magik.generate import generate_test
 from magik.deploy import deploy_test
 from magik.internal_logger import logger
+from magik.constants import TEST_DIR, TEST_RUNS_DIR
 from magik.run import Run
 
 
@@ -61,7 +62,7 @@ def generate(args):
 
 
 def run(args):
-    test_runner = Run()
+    test_runner = Run(test_dir=TEST_DIR, test_runs_dir=TEST_RUNS_DIR)
     test_runner.run_tests(args.test_name)
 
 
@@ -70,7 +71,7 @@ def deploy(args):
 
 
 def run_prod(args):
-    test_runner = Run()
+    test_runner = Run(test_dir=TEST_DIR, test_runs_dir=TEST_RUNS_DIR)
     test_runner.run_tests_in_prod(
         start_date=args.start_date,
         end_date=args.end_date,
