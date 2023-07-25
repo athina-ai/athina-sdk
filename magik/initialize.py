@@ -75,9 +75,17 @@ def _create_schedule_config_file():
     # Create file magik_config.json
     logger.debug("Creating schedule_config.json...")
 
-    # TODO: Fill with real values
-    example_schedule_config_contents = """{
-}"""
+    example_schedule_config_contents = """[
+  {
+    "trigger_type": "by-slug",
+    "trigger_data": [
+      {
+        "prompt_slug": "*",
+        "test_slugs": "*"
+      }
+    ]
+  }
+]"""
     write_to_file(
         SCHEDULE_CONFIG_FILE_PATH,
         example_schedule_config_contents,
@@ -91,7 +99,8 @@ def _add_to_gitignore():
     gitignore_path = ".gitignore"
     if not os.path.exists(gitignore_path):
         logger.info(f"{gitignore_path} does not exist!")
-        logger.info(f"Make sure to add {CONFIG_FILE_PATH} to your gitignore file")
+        logger.info(
+            f"Make sure to add {CONFIG_FILE_PATH} to your gitignore file")
         return
 
     with open(gitignore_path, "a") as gitignore_file:
