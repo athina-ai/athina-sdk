@@ -2,7 +2,7 @@ import os
 from magik.internal_logger import logger
 from magik.sys_exec import write_to_file
 from magik.constants import (
-    TESTRUNS_DIR,
+    TEST_RUNS_DIR,
     TEST_DIR,
     CONFIG_FILE_PATH,
     SCHEDULE_CONFIG_FILE_PATH,
@@ -29,11 +29,11 @@ def _create_magik_tests_dir():
 
 
 def _create_magik_test_runs_dir():
-    if not os.path.exists(TESTRUNS_DIR):
-        os.makedirs(TESTRUNS_DIR, exist_ok=True)
-        logger.info(f"✅ Created {TESTRUNS_DIR} directory")
+    if not os.path.exists(TEST_RUNS_DIR):
+        os.makedirs(TEST_RUNS_DIR, exist_ok=True)
+        logger.info(f"✅ Created {TEST_RUNS_DIR} directory")
     else:
-        logger.info(f"{TESTRUNS_DIR} directory already exists")
+        logger.info(f"{TEST_RUNS_DIR} directory already exists")
 
 
 def _create_magik_config_file():
