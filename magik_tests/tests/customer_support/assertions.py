@@ -50,81 +50,83 @@ def is_valid_length(max_length, output_to_test):
 #   - these will replace variables in curly {braces} in your prompt.txt file in local tests
 # - failure_labels: the labels to tag the failure with - used for the analytics dashboard
 
-tests = [
-    {
-        "description": "Response is within length limits",
-        "eval": is_valid_length(max_length=500),
-        "prompt_vars": {
-            "query": "How can I change my password?",
+
+def define_tests(context: dict):
+    return [
+        {
+            "description": "Response is within length limits",
+            "eval": is_valid_length(max_length=500),
+            "prompt_vars": {
+                "query": "How can I change my password?",
+            },
+            "failure_labels": ["response_too_long"],
         },
-        "failure_labels": ["response_too_long"],
-    },
-    {
-        "description": "Response to a question must contain a valid link",
-        "eval": contains_valid_link(),
-        "prompt_vars": {
-            "query": "How can I change my password?",
+        {
+            "description": "Response to a question must contain a valid link",
+            "eval": contains_valid_link(),
+            "prompt_vars": {
+                "query": "How can I change my password?",
+            },
+            "failure_labels": ["missing_link"],
         },
-        "failure_labels": ["missing_link"],
-    },
-    {
-        "description": "Response to a compliment should ask for feedback",
-        "eval": contains_any(["feedback", "better", "improve"]),
-        "prompt_vars": {
-            "query": "I love the app!",
+        {
+            "description": "Response to a compliment should ask for feedback",
+            "eval": contains_any(["feedback", "better", "improve"]),
+            "prompt_vars": {
+                "query": "I love the app!",
+            },
+            "failure_labels": ["no_feedback"],
         },
-        "failure_labels": ["no_feedback"],
-    },
-    {
-        "description": "Response to a question should contain instructions",
-        "eval": matches_desired_classification(
-            classification_labels_and_descriptions=classification_labels_and_descriptions,
-            input_description=input_description,
-            task_description=task_description,
-            desired_classification_label="Refer_To_Human_Response",
-        ),
-        "prompt_vars": {
-            "query": "How can I change my password?",
+        {
+            "description": "Response to a question should contain instructions",
+            "eval": matches_desired_classification(
+                classification_labels_and_descriptions=classification_labels_and_descriptions,
+                input_description=input_description,
+                task_description=task_description,
+                desired_classification_label="Refer_To_Human_Response",
+            ),
+            "prompt_vars": {
+                "query": "How can I change my password?",
+            },
+            "failure_labels": ["no_instructions"],
         },
-        "failure_labels": ["no_instructions"],
-    },
-    {
-        "description": "Response to a complaint should refer to a human agent",
-        "eval": matches_desired_classification(
-            classification_labels_and_descriptions=classification_labels_and_descriptions,
-            input_description=input_description,
-            task_description=task_description,
-            desired_classification_label="Refer_To_Human_Response",
-        ),
-        "prompt_vars": {
-            "query": "The app is very slow - it's not easy to use.",
+        {
+            "description": "Response to a complaint should refer to a human agent",
+            "eval": matches_desired_classification(
+                classification_labels_and_descriptions=classification_labels_and_descriptions,
+                input_description=input_description,
+                task_description=task_description,
+                desired_classification_label="Refer_To_Human_Response",
+            ),
+            "prompt_vars": {
+                "query": "The app is very slow - it's not easy to use.",
+            },
+            "failure_labels": ["complaint_not_referred_to_human"],
         },
-        "failure_labels": ["complaint_not_referred_to_human"],
-    },
-    {
-        "description": "Response to a compliment should be appreciative",
-        "eval": matches_desired_classification(
-            classification_labels_and_descriptions=classification_labels_and_descriptions,
-            input_description=input_description,
-            task_description=task_description,
-            desired_classification_label="Appreciation_Response",
-        ),
-        "prompt_vars": {
-            "query": "The app is really user-friendly!",
+        {
+            "description": "Response to a compliment should be appreciative",
+            "eval": matches_desired_classification(
+                classification_labels_and_descriptions=classification_labels_and_descriptions,
+                input_description=input_description,
+                task_description=task_description,
+                desired_classification_label="Appreciation_Response",
+            ),
+            "prompt_vars": {
+                "query": "The app is really user-friendly!",
+            },
+            "failure_labels": ["wrong_intent"],
         },
-        "failure_labels": ["wrong_intent"],
-    },
-    {
-        "description": "Response to unsubscribe query should offer the user a free trial",
-        "eval": matches_desired_classification(
-            classification_labels_and_descriptions=classification_labels_and_descriptions,
-            input_description=input_description,
-            task_description=task_description,
-            desired_classification_label="Unsubscribe_Response",
-        ),
-        "prompt_vars": {
-            "query": "I want to unsubscribe from the mailing list.",
+        {
+            "description": "Response to unsubscribe query should offer the user a free trial",
+            "eval": matches_desired_classification(
+                classification_labels_and_descriptions=classification_labels_and_descriptions,
+                input_description=input_description,
+                task_description=task_description,
+                desired_classification_label="Unsubscribe_Response",
+            ),
+            "prompt_vars": {
+                "query": "I want to unsubscribe from the mailing list.",
+            },
+            "failure_labels": ["wrong_intent"],
         },
-        "failure_labels": ["wrong_intent"],
-    },
-]
+    ]

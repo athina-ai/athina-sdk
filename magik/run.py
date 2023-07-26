@@ -8,19 +8,22 @@ from magik.utils import substitute_vars
 from magik.openai_helper import OpenAI
 from magik.sys_exec import read_from_file, create_file
 from magik.config import get_open_ai_default_model, get_magik_api_key
-from magik.constants import TESTRUNS_DIR, TEST_DIR, RUN_URL
+from magik.constants import RUN_URL
 
 
 class Run:
-    def __init__(self):
+    def __init__(self, test_dir, test_runs_dir):
         self.saved_prompt_response = ""
+        self.test_dir = test_dir
+        self.test_runs_dir = test_runs_dir
 
     def run_tests(self, test_name):
-        tests = self._load_tests(test_name)
+        test_context = self._load_context(test_name)
+        tests = self._load_tests(test_name, test_context=test_context)
         raw_prompt = self._load_prompt(test_name)
-        log_file_path = self._log_file_path(test_name)
+        log_file_path = self._log_file_path()
         self._run_tests_for_prompt(
-            test_name, tests, raw_prompt, log_file_path=log_file_path
+            tests=tests, raw_prompt=raw_prompt, log_file_path=log_file_path
         )
 
     def run_tests_in_prod(self, start_date, end_date, prompt_slug, test_slug):
@@ -50,7 +53,7 @@ class Run:
             logger.error(f"ERROR: Failed to trigger test in prod: {response.text}")
             return
 
-    def _run_tests_for_prompt(self, test_name, tests, raw_prompt, log_file_path):
+    def _run_tests_for_prompt(self, tests, raw_prompt, log_file_path):
         self._log_to_file_and_console("---------------")
         self._log_to_file_and_console("TEST RESULTS")
         self._log_to_file_and_console("---------------")
@@ -58,10 +61,10 @@ class Run:
 
         num_tests_passed = 0
         for test in tests:
-            test_result = self._run_individual_test_for_prompt(
-                test_name, test, raw_prompt, log_file_path
+            test_result_obj = self._run_individual_test_for_prompt(
+                test=test, raw_prompt=raw_prompt, log_file_path=log_file_path
             )
-            if test_result:
+            if test_result_obj["test_result"]["result"]:
                 num_tests_passed += 1
 
         num_tests_failed = len(tests) - num_tests_passed
@@ -78,9 +81,7 @@ class Run:
             """
             )
 
-    def _run_individual_test_for_prompt(
-        self, test_name, test, raw_prompt, log_file_path
-    ):
+    def _run_individual_test_for_prompt(self, test, raw_prompt, log_file_path):
         openai = OpenAI()
         prompt_vars = test["prompt_vars"]
         model = get_open_ai_default_model()
@@ -98,11 +99,14 @@ class Run:
             )
 
         return self._run_individual_test_for_prompt_response(
-            test_name, test, prompt, prompt_response, log_file_path=log_file_path
+            test=test,
+            prompt=prompt,
+            prompt_response=prompt_response,
+            log_file_path=log_file_path,
         )
 
     def _run_individual_test_for_prompt_response(
-        self, test_name, test, prompt, prompt_response, log_file_path
+        self, test, prompt, prompt_response, log_file_path
     ):
         test_function_result_obj = test["eval"](prompt_response)
         result_obj = self._generate_result_object(
@@ -117,15 +121,15 @@ class Run:
             log_file_path=log_file_path,
         )
 
-        return result_obj["test_result"]["result"]
+        return result_obj
 
     def _load_prompt(self, test_name):
-        test_file_path = f"{TEST_DIR}/{test_name}/prompt.txt"
+        test_file_path = f"{self.test_dir}/{test_name}/prompt.txt"
         absolute_path = os.path.abspath(test_file_path)
         return read_from_file(absolute_path)
 
-    def _load_tests(self, test_name):
-        test_file_path = f"{TEST_DIR}/{test_name}/assertions.py"
+    def _load_attr_from_test_file(self, test_name, attr_name, default_value=None):
+        test_file_path = f"{self.test_dir}/{test_name}/assertions.py"
         # Get the absolute path by resolving against the current working directory
         absolute_path = os.path.abspath(test_file_path)
 
@@ -139,17 +143,34 @@ class Run:
         spec.loader.exec_module(module)
 
         # Access the `tests` array from the module
-        return getattr(module, "tests", [])
+        return getattr(module, attr_name, default_value)
+
+    def _load_define_tests_fn(self, test_name):
+        return self._load_attr_from_test_file(
+            test_name=test_name, attr_name="define_tests", default_value=lambda _: []
+        )
+
+    def _load_context(self, test_name):
+        return self._load_attr_from_test_file(
+            test_name=test_name, attr_name="test_context", default_value=None
+        )
+
+    def _load_tests(self, test_name, test_context):
+        define_tests_fn = self._load_define_tests_fn(test_name)
+        return define_tests_fn(test_context)
+
+    def _generate_test_object(self, test):
+        test_function_name = test["eval"].__name__
+        return {
+            **test,
+            "eval": test_function_name,
+        }
 
     def _generate_result_object(self, test, test_result, prompt, prompt_response):
         did_test_pass = test_result["result"]
         failure_labels = test["failure_labels"] if not did_test_pass else []
-        test_function_name = test["eval"].__name__
         return {
-            "test": {
-                **test,
-                "eval": test_function_name,
-            },
+            "test": self._generate_test_object(test),
             "test_result": test_result,
             "prompt": prompt,
             "prompt_response": prompt_response,
@@ -201,8 +222,6 @@ class Run:
         self._log_to_file_and_console(f"Failure Labels: {failure_labels}", log_file)
         self._log_to_file_and_console("\n", log_file)
 
-    def _log_file_path(self, test_name):
-        current_timestamp = datetime.now()
-        formatted_timestamp = current_timestamp.strftime("%Y-%m-%d_%H-%M-%S")
-        log_file_path = f"{TESTRUNS_DIR}/{test_name}/{formatted_timestamp}.txt"
+    def _log_file_path(self):
+        log_file_path = f"{self.test_runs_dir}/log.txt"
         return log_file_path

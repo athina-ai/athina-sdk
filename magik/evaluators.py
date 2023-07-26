@@ -235,7 +235,6 @@ def not_contains_pii(output_to_test=None):
 @magik_eval
 def contains_link(output_to_test=None):
     pattern = r"(?!.*@)(?:https?://)?(?:www\.)?\S+\.\S+"
-    print("output_to_test", output_to_test)
     result = bool(re.search(pattern, output_to_test))
     if result:
         return {"result": True, "reason": "Link found in output"}
@@ -349,7 +348,6 @@ def cosine_similarity_above_threshold(
     output_to_test=None,
 ):
     score = similarity_score(output_to_test, compare_against, model)
-    print(f"score is {score}")
     result = score > threshold
     return {
         "result": result,
@@ -365,7 +363,6 @@ def cosine_similarity_below_threshold(
     output_to_test=None,
 ):
     score = similarity_score(output_to_test, compare_against, model)
-    print(f"score is {score}")
     result = score < threshold
     return {
         "result": result,
@@ -391,4 +388,22 @@ def matches_desired_classification(
     return {
         "result": result,
         "reason": f"output is classified as {label} and desired classification is {desired_classification_label}",
+    }
+
+
+@magik_eval
+def api_call(
+    url: str,
+    payload: dict,
+    headers: dict = None,
+    output_to_test=None,
+):
+    payload["output_to_test"] = output_to_test
+    response = requests.post(url, json=payload, headers=headers)
+    result = response.json().get("result")
+    reason = response.json().get("reason")
+
+    return {
+        "result": result,
+        "reason": reason,
     }
