@@ -17,14 +17,19 @@ class Run:
         self.test_dir = test_dir
         self.test_runs_dir = test_runs_dir
 
-    def run_tests(self, test_name):
+    def run_tests(self, test_name, response):
         test_context = self._load_context(test_name)
         tests = self._load_tests(test_name, test_context=test_context)
         raw_prompt = self._load_prompt(test_name)
         log_file_path = self._log_file_path()
-        self._run_tests_for_prompt(
-            tests=tests, raw_prompt=raw_prompt, log_file_path=log_file_path
-        )
+        if response:
+            self._run_tests_for_prompt_response(
+                tests=tests, raw_prompt=raw_prompt, prompt_response=response, log_file_path=log_file_path
+            )
+        else:
+            self._run_tests_for_prompt(
+                tests=tests, raw_prompt=raw_prompt, log_file_path=log_file_path
+            )
 
     def run_tests_in_prod(self, start_date, end_date, prompt_slug, test_slug):
         request_data = {
@@ -41,7 +46,8 @@ class Run:
         # Remove None fields from the payload
         payload = {k: v for k, v in request_data.items() if v is not None}
 
-        logger.debug(f"Sending request to {RUN_URL} with data: {request_data}\n")
+        logger.debug(
+            f"Sending request to {RUN_URL} with data: {request_data}\n")
         response = requests.post(
             RUN_URL,
             json=payload,
@@ -50,7 +56,8 @@ class Run:
             },
         )
         if response.status_code != 200:
-            logger.error(f"ERROR: Failed to trigger test in prod: {response.text}")
+            logger.error(
+                f"ERROR: Failed to trigger test in prod: {response.text}")
             return
 
     def _run_tests_for_prompt(self, tests, raw_prompt, log_file_path):
@@ -63,6 +70,34 @@ class Run:
         for test in tests:
             test_result_obj = self._run_individual_test_for_prompt(
                 test=test, raw_prompt=raw_prompt, log_file_path=log_file_path
+            )
+            if test_result_obj["test_result"]["result"]:
+                num_tests_passed += 1
+
+        num_tests_failed = len(tests) - num_tests_passed
+
+        logger.info("\n------------")
+        if num_tests_passed == len(tests):
+            logger.info("✅ All tests passed")
+            logger.info("\n\n")
+        else:
+            logger.info(
+                f"""
+    ✅ {num_tests_passed}/{len(tests)} tests passed
+    ❌ {num_tests_failed}/{len(tests)} tests failed
+            """
+            )
+
+    def _run_tests_for_prompt_response(self, tests, raw_prompt, prompt_response, log_file_path):
+        self._log_to_file_and_console("---------------")
+        self._log_to_file_and_console("TEST RESULTS")
+        self._log_to_file_and_console("---------------")
+        self._log_to_file_and_console("\n")
+
+        num_tests_passed = 0
+        for test in tests:
+            test_result_obj = self._run_individual_test_for_prompt_response(
+                test=test, prompt=raw_prompt, prompt_response=prompt_response, log_file_path=log_file_path
             )
             if test_result_obj["test_result"]["result"]:
                 num_tests_passed += 1
@@ -138,7 +173,8 @@ class Run:
         module_name = os.path.splitext(module_name)[0]
 
         # Load the module dynamically
-        spec = importlib.util.spec_from_file_location(module_name, absolute_path)
+        spec = importlib.util.spec_from_file_location(
+            module_name, absolute_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
@@ -190,7 +226,8 @@ class Run:
                 self._log_prompt_results(result_obj, log_file)
                 self._log_test_results(result_obj, log_file)
         else:
-            self._log_to_file_and_console(f"Test: {test_description}", color="cyan")
+            self._log_to_file_and_console(
+                f"Test: {test_description}", color="cyan")
             self._log_to_file_and_console(f"-----", color="cyan")
             self._log_prompt_results(result_obj)
             self._log_test_results(result_obj)
@@ -209,7 +246,8 @@ class Run:
         prompt = result_obj["prompt"]
         prompt_response = result_obj["prompt_response"]
         self._log_to_file_and_console(f"Prompt: {prompt}\n", log_file)
-        self._log_to_file_and_console(f"Prompt Response: {prompt_response}\n", log_file)
+        self._log_to_file_and_console(
+            f"Prompt Response: {prompt_response}\n", log_file)
 
     def _log_test_results(self, result_obj, log_file=None):
         test_function_result_bool = result_obj["test_result"]["result"]
@@ -217,9 +255,12 @@ class Run:
         test_result_reason = result_obj["test_result"]["reason"]
         failure_labels = result_obj["failure_labels"]
 
-        self._log_to_file_and_console(f"Test Result: {test_result_str}", log_file)
-        self._log_to_file_and_console(f"Reason: {test_result_reason}", log_file)
-        self._log_to_file_and_console(f"Failure Labels: {failure_labels}", log_file)
+        self._log_to_file_and_console(
+            f"Test Result: {test_result_str}", log_file)
+        self._log_to_file_and_console(
+            f"Reason: {test_result_reason}", log_file)
+        self._log_to_file_and_console(
+            f"Failure Labels: {failure_labels}", log_file)
         self._log_to_file_and_console("\n", log_file)
 
     def _log_file_path(self):
