@@ -42,6 +42,10 @@ def is_valid_length(max_length, output_to_test):
     }
 
 
+# This is used to define the context or ground truth for the test (if necessary)
+test_context = {}
+
+
 # Every test must contain:
 # - description: a description of the test
 # - eval: the function to run to evaluate the output
@@ -49,8 +53,6 @@ def is_valid_length(max_length, output_to_test):
 #   - dictionary of variable values to pass into the prompt
 #   - these will replace variables in curly {braces} in your prompt.txt file in local tests
 # - failure_labels: the labels to tag the failure with - used for the analytics dashboard
-
-
 def define_tests(context: dict):
     return [
         {
