@@ -57,10 +57,13 @@ class CLIAppLogger(logging.Logger, metaclass=Singleton):
         formatted_message = f"\033[{color_code}m{message}\033[0m"
         print(formatted_message, *args, **kwargs)
 
-    def to_file_and_console(self, output: str, log_file=None, color=None):
+    def to_file(self, output: str, log_file):
         if log_file is not None:
             log_file.write(output + "\n")
             log_file.flush()  # Ensure immediate writing to the file
+
+    def to_file_and_console(self, output: str, log_file=None, color=None):
+        self.to_file(output, log_file)
 
         if color is not None:
             logger.log_with_color(output, color)

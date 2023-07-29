@@ -12,7 +12,11 @@ from .types.test_run import (
     EvalResult,
     IndividualTestRunResult,
 )
-from .run_logger import log_test_suite_results, log_test_run
+from .run_logger import (
+    log_test_suite_results,
+    log_test_run,
+    _log_test_suite_results_as_csv,
+)
 from typing import TypedDict, Any, List, Dict, Optional
 
 
@@ -29,7 +33,8 @@ class Run:
         test_name: str,
         model: str,
         response: Optional[str] = None,
-        number_of_runs: Optional[int] = 1,
+        number_of_runs: int = 1,
+        csv_file_path: Optional[str] = None,
     ):
         test_context = self.test_loader._load_context(test_name)
         test_suite = self.test_loader._load_test_suite(
@@ -44,6 +49,7 @@ class Run:
                 prompt_response=response,
                 log_file_path=log_file_path,
                 number_of_runs=number_of_runs,
+                csv_file_path=csv_file_path,
             )
         else:
             self._run_tests_for_prompt(
@@ -52,6 +58,7 @@ class Run:
                 model=model,
                 log_file_path=log_file_path,
                 number_of_runs=number_of_runs,
+                csv_file_path=csv_file_path,
             )
 
     def run_tests_in_prod(self, start_date, end_date, prompt_slug, test_slug):
@@ -108,6 +115,7 @@ class Run:
         model: str,
         log_file_path: str,
         number_of_runs: int,
+        csv_file_path: Optional[str],
     ):
         # Use this object to store the stats for each test
         test_suite_results = self._initialize_test_suite_result(test_suite)
@@ -128,6 +136,9 @@ class Run:
         self._calculate_test_run_stats(test_suite_results)
         log_test_suite_results(test_suite_results)
 
+        if csv_file_path:
+            _log_test_suite_results_as_csv(test_suite_results, csv_file_path)
+
     def _run_tests_for_prompt_response(
         self,
         test_suite: list,
@@ -135,6 +146,7 @@ class Run:
         prompt_response: str,
         log_file_path: str,
         number_of_runs: int,
+        csv_file_path: Optional[str],
     ):
         # Use this object to store the stats for each test
         test_suite_results = self._initialize_test_suite_result(test_suite)
@@ -153,6 +165,9 @@ class Run:
 
         self._calculate_test_run_stats(test_suite_results)
         log_test_suite_results(test_suite_results)
+
+        if csv_file_path:
+            _log_test_suite_results_as_csv(test_suite_results, csv_file_path)
 
     def _run_individual_test_for_prompt(
         self, test: Test, raw_prompt: str, model: str, log_file_path: str
