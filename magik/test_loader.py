@@ -1,5 +1,5 @@
 import os
-from magik.sys_exec import read_from_file
+from .sys_exec import read_from_file
 import importlib.util
 
 
@@ -23,7 +23,8 @@ class TestLoader:
         module_name = os.path.splitext(module_name)[0]
 
         # Load the module dynamically
-        spec = importlib.util.spec_from_file_location(module_name, absolute_path)
+        spec = importlib.util.spec_from_file_location(
+            module_name, absolute_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 

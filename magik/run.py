@@ -1,22 +1,18 @@
 import requests
-from magik.internal_logger import logger
-from magik.utils import substitute_vars
-from magik.openai_helper import OpenAI
-from magik.test_loader import TestLoader
-from magik.config import get_open_ai_default_model, get_magik_api_key
-from magik.sys_exec import read_from_file, create_file
-from magik.constants import RUN_URL
-from magik.metrics import calculate_flakiness_index
-from magik.types.test_run import (
+from .internal_logger import logger
+from .utils import substitute_vars
+from .openai_helper import OpenAI
+from .test_loader import TestLoader
+from .config import get_magik_api_key
+from .constants import RUN_URL
+from .metrics import calculate_flakiness_index
+from .types.test_run import (
     Test,
-    TestRunStats,
-    TestRunDetails,
-    TestRunResult,
     TestSuiteResults,
     EvalResult,
     IndividualTestRunResult,
 )
-from magik.run_logger import log_test_suite_results, log_test_run
+from .run_logger import log_test_suite_results, log_test_run
 from typing import TypedDict, Any, List, Dict, Optional
 
 
@@ -162,14 +158,14 @@ class Run:
     ) -> IndividualTestRunResult:
         openai = OpenAI()
         prompt_vars = test["prompt_vars"]
+        prompt = raw_prompt
+        prompt_response = self.saved_prompt_response
         if model == "gpt-3.5-turbo":
             if len(prompt_vars) == 0:
-                prompt = raw_prompt
                 if len(self.saved_prompt_response) == 0:
                     self.saved_prompt_response = openai.openai_chat_completion_message(
                         model=model, prompt=prompt
                     )
-                prompt_response = self.saved_prompt_response
             else:
                 prompt = substitute_vars(raw_prompt, prompt_vars)
                 prompt_response = openai.openai_chat_completion_message(
@@ -177,12 +173,10 @@ class Run:
                 )
         elif model == "text-davinci-003":
             if len(prompt_vars) == 0:
-                prompt = raw_prompt
                 if len(self.saved_prompt_response) == 0:
                     self.saved_prompt_response = openai.openai_completion_message(
                         model=model, prompt=prompt
                     )
-                prompt_response = self.saved_prompt_response
             else:
                 prompt = substitute_vars(raw_prompt, prompt_vars)
                 prompt_response = openai.openai_completion_message(

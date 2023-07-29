@@ -1,7 +1,7 @@
 import openai
 from tenacity import retry, stop_after_attempt, wait_fixed
-from magik.constants import API_BASE_URL
-from magik.config import (
+from .constants import API_BASE_URL
+from .config import (
     get_open_ai_api_key,
     get_open_ai_default_model,
     get_magik_api_key,

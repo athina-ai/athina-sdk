@@ -1,6 +1,6 @@
 import requests
-from magik.constants import API_BASE_URL
-from magik.config import get_magik_api_key
+from .constants import API_BASE_URL
+from .config import get_magik_api_key
 
 
 # Log the request and response from OpenAI chat completion to Magik API

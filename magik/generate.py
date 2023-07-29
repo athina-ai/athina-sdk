@@ -1,7 +1,7 @@
-from magik.internal_logger import logger
-from magik.constants import TEST_DIR
-from magik.sys_exec import read_from_file, write_to_file
-from magik.constants import EXAMPLES_DIR
+from .internal_logger import logger
+from .constants import TEST_DIR
+from .sys_exec import read_from_file, write_to_file
+from .constants import EXAMPLES_DIR
 import inspect
 
 
@@ -9,7 +9,8 @@ import inspect
 def _get_module_file_path(file_name):
     module = inspect.getmodule(_get_module_file_path)
     module_file_path = inspect.getfile(module)
-    module_dir = module_file_path.rpartition("/")[0]  # Extract the directory path
+    module_dir = module_file_path.rpartition(
+        "/")[0]  # Extract the directory path
     file_path = module_dir + "/" + file_name  # Combine with the file name
     return file_path
 

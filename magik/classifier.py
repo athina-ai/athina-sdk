@@ -1,4 +1,4 @@
-from magik.openai_helper import OpenAI
+from .openai_helper import OpenAI
 
 classifier_prompt = """
 You are acting as a classifier. 
