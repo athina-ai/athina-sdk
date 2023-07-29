@@ -1,9 +1,10 @@
 import logging
 import colorlog
+from typing import Dict, Any
 
 
 class Singleton(type):
-    _instances = {}
+    _instances: Dict[Any, Any] = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
@@ -55,6 +56,16 @@ class CLIAppLogger(logging.Logger, metaclass=Singleton):
         color_code = colors.get(color.lower(), "37")
         formatted_message = f"\033[{color_code}m{message}\033[0m"
         print(formatted_message, *args, **kwargs)
+
+    def to_file_and_console(self, output: str, log_file=None, color=None):
+        if log_file is not None:
+            log_file.write(output + "\n")
+            log_file.flush()  # Ensure immediate writing to the file
+
+        if color is not None:
+            logger.log_with_color(output, color)
+        else:
+            logger.info(output)
 
 
 def setup_logger():

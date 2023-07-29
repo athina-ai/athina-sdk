@@ -27,11 +27,15 @@ def deploy_test(test_name: str):
     # prepare data for API request
     test_runner = Run(test_dir=TEST_DIR, test_runs_dir=TEST_RUNS_DIR)
     test_context = test_runner._load_context(test_name)
-    tests = test_runner._load_tests(test_name=test_name, test_context=test_context)
-    tests = list(map(lambda test: {**test, "eval": test["eval"].__name__}, tests))
+    test_suite = test_runner._load_test_suite(
+        test_name=test_name, test_context=test_context
+    )
+    test_suite = list(
+        map(lambda test: {**test, "eval": test["eval"].__name__}, test_suite)
+    )
 
     headers = {"magik-api-key": api_key}
-    data = {"test_slug": test_name, "test_data": tests}
+    data = {"test_slug": test_name, "test_data": test_suite}
     files = {
         "file": ("assertions.py", file_content, "application/octet-stream"),
         "json": (None, json.dumps(data), "application/json"),
