@@ -26,7 +26,12 @@ class Run:
         self.test_loader = TestLoader(test_dir=test_dir)
         self.test_runs_dir = test_runs_dir
 
-    def run_tests(self, test_name: str, response=None, number_of_runs=1):
+    def run_tests(
+        self,
+        test_name: str,
+        response: Optional[str] = None,
+        number_of_runs: Optional[int] = 1,
+    ):
         test_context = self.test_loader._load_context(test_name)
         test_suite = self.test_loader._load_test_suite(
             test_name, test_context=test_context

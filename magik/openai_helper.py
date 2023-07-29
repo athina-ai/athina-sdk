@@ -1,4 +1,5 @@
 import openai
+from tenacity import retry, stop_after_attempt, wait_fixed
 from magik.constants import API_BASE_URL
 from magik.config import (
     get_open_ai_api_key,
@@ -14,6 +15,7 @@ class OpenAI:
         self.magik_api_key = get_magik_api_key()
         self.openai.api_key = get_open_ai_api_key()
 
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
     def openai_chat_completion(self, model, prompt):
         """
         Call the OpenAI API to generate a chat completion for models like GPT 3.5 turbo and GPT 4
@@ -22,6 +24,7 @@ class OpenAI:
             model=model, messages=[{"role": "user", "content": prompt}]
         )
 
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
     def openai_chat_completion_message(self, model, prompt):
         """
         Call the OpenAI API to generate a chat completion for models like GPT 3.5 turbo and GPT 4
@@ -30,6 +33,7 @@ class OpenAI:
         response = self.openai_chat_completion(model, prompt)
         return response.choices[0].message.content
 
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
     def get_embedding(self, text: str, model="text-embedding-ada-002") -> list[float]:
         return self.openai.Embedding.create(input=[text], model=model)["data"][0][
             "embedding"
