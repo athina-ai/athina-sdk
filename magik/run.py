@@ -8,15 +8,57 @@ from magik.sys_exec import create_file
 from magik.test_loader import TestLoader
 from magik.config import get_open_ai_default_model, get_magik_api_key
 from magik.constants import RUN_URL
+from magik.metrics import calculate_flakiness_index
+from typing import TypedDict, Any, List, Dict, Optional
+
+
+class Test(TypedDict):
+    description: str
+    eval: Any
+    prompt_vars: Dict[str, str]
+    failure_labels: List[str]
+
+
+class TestResultResult(TypedDict):
+    result: bool
+    reason: str
+
+
+class TestResult(TypedDict):
+    test: Test
+    test_result: TestResultResult
+    prompt: str
+    prompt_response: str
+    failure_labels: List[str]
+
+
+{
+    "should return a list of 3 items": {
+        "num_passed": int,
+        "num_failed": int,
+        "pass_rate": float,
+        "flakiness": float,
+    }
+}
+
+
+class TestResultStats(TypedDict):
+    num_passed: int
+    num_failed: int
+    pass_rate: Optional[float]
+    flakiness: Optional[float]
+
+
+TestSuiteResultStats = Dict[str, TestResultStats]
 
 
 class Run:
-    def __init__(self, test_dir, test_runs_dir):
+    def __init__(self, test_dir: str, test_runs_dir: str):
         self.saved_prompt_response = ""
         self.test_loader = TestLoader(test_dir=test_dir)
         self.test_runs_dir = test_runs_dir
 
-    def run_tests(self, test_name, response=None, number_of_runs=8):
+    def run_tests(self, test_name: str, response=None, number_of_runs=8):
         test_context = self.test_loader._load_context(test_name)
         test_suite = self.test_loader._load_test_suite(
             test_name, test_context=test_context
@@ -70,12 +112,7 @@ class Run:
         self, test_suite: list, raw_prompt: str, log_file_path: str, number_of_runs: int
     ):
         # Use this object to store the stats for each test
-        test_result_stats = {}
-        for test in test_suite:
-            test_result_stats[test["description"]] = {
-                "num_passed": 0,
-                "num_failed": 0,
-            }
+        test_suite_result_stats = self._initialize_test_suite_result_stats(test_suite)
 
         # Run the tests for the specified number of runs
         for i in range(number_of_runs):
@@ -86,18 +123,21 @@ class Run:
                     log_file_path=log_file_path,
                 )
                 if test_result_obj["test_result"]["result"]:
-                    test_result_stats[test["description"]]["num_passed"] += 1
+                    test_suite_result_stats[test["description"]]["num_passed"] += 1
                 else:
-                    test_result_stats[test["description"]]["num_failed"] += 1
+                    test_suite_result_stats[test["description"]]["num_failed"] += 1
 
-        self._log_to_file_and_console("---------------")
-        self._log_to_file_and_console("TEST RESULTS")
-        self._log_to_file_and_console("---------------\n")
+        logger.to_file_and_console("---------------")
+        logger.to_file_and_console("TEST RESULTS")
+        logger.to_file_and_console("---------------\n")
 
-        for k, v in test_result_stats.items():
+        for k, v in test_suite_result_stats.items():
             # calculate percentage pass / fail for each test
-            v["pass_rate"] = round((v["num_passed"] / number_of_runs) * 100, 2)
-            v["flakiness"] = self.calculate_flakiness_index(v["pass_rate"])
+            pass_rate_percentage: float = round(
+                (v["num_passed"] / number_of_runs) * 100, 2
+            )
+            v["pass_rate"] = pass_rate_percentage
+            v["flakiness"] = calculate_flakiness_index(pass_rate_percentage)
             logger.info(f"{k}:")
             logger.info(f" ✅ {v['num_passed']} passed")
             logger.info(f" ❌ {v['num_failed']} failed")
@@ -114,12 +154,7 @@ class Run:
         number_of_runs: int,
     ):
         # Use this object to store the stats for each test
-        test_result_stats = {}
-        for test in test_suite:
-            test_result_stats[test["description"]] = {
-                "num_passed": 0,
-                "num_failed": 0,
-            }
+        test_result_stats = self._initialize_test_suite_result_stats(test_suite)
 
         for i in range(number_of_runs):
             for test in test_suite:
@@ -134,13 +169,17 @@ class Run:
                 else:
                     test_result_stats[test["description"]]["num_failed"] += 1
 
-        self._log_to_file_and_console("---------------")
-        self._log_to_file_and_console("TEST RESULTS")
-        self._log_to_file_and_console("---------------\n")
+        logger.to_file_and_console("---------------")
+        logger.to_file_and_console("TEST RESULTS")
+        logger.to_file_and_console("---------------\n")
         for k, v in test_result_stats.items():
             # calculate percentage pass / fail for each test
-            v["pass_rate"] = round((v["num_passed"] / number_of_runs) * 100, 2)
-            if v["pass_rate"] == 100:
+            pass_rate_percentage: float = round(
+                (v["num_passed"] / number_of_runs) * 100, 2
+            )
+            v["pass_rate"] = pass_rate_percentage
+            v["flakiness"] = calculate_flakiness_index(pass_rate_percentage)
+            if v["pass_rate"] == 100.0:
                 logger.info(f"{k}: ✅ All tests passed (100%)\n")
             else:
                 logger.info(
@@ -149,7 +188,7 @@ class Run:
             logger.info("\n\n")
 
     def _run_individual_test_for_prompt(
-        self, test: list, raw_prompt: str, log_file_path: str
+        self, test: Test, raw_prompt: str, log_file_path: str
     ):
         openai = OpenAI()
         prompt_vars = test["prompt_vars"]
@@ -175,7 +214,7 @@ class Run:
         )
 
     def _run_individual_test_for_prompt_response(
-        self, test, prompt, prompt_response, log_file_path
+        self, test: Test, prompt: str, prompt_response: str, log_file_path: str
     ):
         test_function_result_obj = test["eval"](prompt_response)
         result_obj = self._generate_result_object(
@@ -192,14 +231,18 @@ class Run:
 
         return result_obj
 
-    def _generate_test_object(self, test):
+    def _generate_test_object(self, test: Test) -> Test:
         test_function_name = test["eval"].__name__
         return {
-            **test,
+            "description": test["description"],
             "eval": test_function_name,
+            "prompt_vars": test["prompt_vars"],
+            "failure_labels": test["failure_labels"],
         }
 
-    def _generate_result_object(self, test, test_result, prompt, prompt_response):
+    def _generate_result_object(
+        self, test: Test, test_result, prompt, prompt_response
+    ) -> TestResult:
         did_test_pass = test_result["result"]
         failure_labels = test["failure_labels"] if not did_test_pass else []
         return {
@@ -210,60 +253,29 @@ class Run:
             "failure_labels": failure_labels,
         }
 
-    def calculate_flakiness_index(self, pass_rate_percentage):
-        """
-        Calculate the Flakiness Index from the pass rate percentage.
-
-        Parameters:
-            pass_rate_percentage (float): The pass rate percentage, a value between 0 and 100.
-
-        Returns:
-            float: The Flakiness Index, a value between 0 and 100.
-        """
-        # Ensure the pass_rate_percentage is between 0 and 100.
-        pass_rate_percentage = max(0, min(pass_rate_percentage, 100))
-
-        # Normalize the pass rate percentage to a range between -1 and 1.
-        normalized_prp = (2 * pass_rate_percentage - 100) / 100
-
-        # Calculate the Flakiness Index.
-        flakiness_index = (1 - abs(normalized_prp)) * 100
-
-        return flakiness_index
-
-    def _log_results(self, result_obj, log_file_path=None):
+    def _log_results(self, result_obj: TestResult, log_file_path: Optional[str] = None):
         sys.stdout.flush()  # Flush the stdout buffer to ensure immediate printing to the console
         test_description = result_obj["test"]["description"]
         if log_file_path is not None:
             create_file(log_file_path)
             with open(log_file_path, "a") as log_file:
-                self._log_to_file_and_console(
+                logger.to_file_and_console(
                     f"Test: {test_description}", log_file, color="cyan"
                 )
-                self._log_to_file_and_console(f"-----", log_file, color="cyan")
+                logger.to_file_and_console(f"-----", log_file, color="cyan")
                 self._log_prompt_results(result_obj, log_file)
                 self._log_test_results(result_obj, log_file)
         else:
-            self._log_to_file_and_console(f"Test: {test_description}", color="cyan")
-            self._log_to_file_and_console(f"-----", color="cyan")
+            logger.to_file_and_console(f"Test: {test_description}", color="cyan")
+            logger.to_file_and_console(f"-----", color="cyan")
             self._log_prompt_results(result_obj)
             self._log_test_results(result_obj)
-
-    def _log_to_file_and_console(self, output, log_file=None, color=None):
-        if log_file is not None:
-            log_file.write(output + "\n")
-            log_file.flush()  # Ensure immediate writing to the file
-
-        if color is not None:
-            logger.log_with_color(output, color)
-        else:
-            logger.info(output)
 
     def _log_prompt_results(self, result_obj, log_file=None):
         prompt = result_obj["prompt"]
         prompt_response = result_obj["prompt_response"]
-        self._log_to_file_and_console(f"Prompt: {prompt}\n", log_file)
-        self._log_to_file_and_console(f"Prompt Response: {prompt_response}\n", log_file)
+        logger.to_file_and_console(f"Prompt: {prompt}\n", log_file)
+        logger.to_file_and_console(f"Prompt Response: {prompt_response}\n", log_file)
 
     def _log_test_results(self, result_obj, log_file=None):
         test_function_result_bool = result_obj["test_result"]["result"]
@@ -271,11 +283,25 @@ class Run:
         test_result_reason = result_obj["test_result"]["reason"]
         failure_labels = result_obj["failure_labels"]
 
-        self._log_to_file_and_console(f"Test Result: {test_result_str}", log_file)
-        self._log_to_file_and_console(f"Reason: {test_result_reason}", log_file)
-        self._log_to_file_and_console(f"Failure Labels: {failure_labels}", log_file)
-        self._log_to_file_and_console("\n", log_file)
+        logger.to_file_and_console(f"Test Result: {test_result_str}", log_file)
+        logger.to_file_and_console(f"Reason: {test_result_reason}", log_file)
+        logger.to_file_and_console(f"Failure Labels: {failure_labels}", log_file)
+        logger.to_file_and_console("\n", log_file)
 
     def _log_file_path(self):
         log_file_path = f"{self.test_runs_dir}/log.txt"
         return log_file_path
+
+    def _initialize_test_suite_result_stats(
+        self, test_suite: List[Test]
+    ) -> TestSuiteResultStats:
+        # Use this object to store the stats for each test
+        test_suite_result_stats: TestSuiteResultStats = {}
+        for test in test_suite:
+            test_suite_result_stats[test["description"]] = {
+                "num_passed": 0,
+                "num_failed": 0,
+                "pass_rate": None,
+                "flakiness": None,
+            }
+        return test_suite_result_stats
