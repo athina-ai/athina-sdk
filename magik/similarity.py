@@ -1,5 +1,5 @@
 import numpy as np
-from magik.openai_helper import OpenAI
+from .openai_helper import OpenAI
 
 
 # Similarity score

@@ -1,8 +1,8 @@
 import sys
 from typing import Optional
-from magik.types.test_run import TestSuiteResults, IndividualTestRunResult
-from magik.internal_logger import logger
-from magik.sys_exec import create_file
+from .types.test_run import TestSuiteResults, IndividualTestRunResult
+from .internal_logger import logger
+from .sys_exec import create_file
 
 
 def log_test_suite_results(test_suite_result_stats: TestSuiteResults):
@@ -45,8 +45,10 @@ def log_test_run(
     else:
         logger.to_file_and_console(f"Test: {test_description}", color="cyan")
         logger.to_file_and_console(f"-----", color="cyan")
-        _log_prompt_results(individual_test_run_result=individual_test_run_result)
-        _log_test_results(individual_test_run_result=individual_test_run_result)
+        _log_prompt_results(
+            individual_test_run_result=individual_test_run_result)
+        _log_test_results(
+            individual_test_run_result=individual_test_run_result)
 
 
 def _log_prompt_results(
@@ -55,7 +57,8 @@ def _log_prompt_results(
     prompt = individual_test_run_result["prompt"]
     prompt_response = individual_test_run_result["prompt_response"]
     logger.to_file_and_console(f"Prompt: {prompt}\n", log_file)
-    logger.to_file_and_console(f"Prompt Response: {prompt_response}\n", log_file)
+    logger.to_file_and_console(
+        f"Prompt Response: {prompt_response}\n", log_file)
 
 
 def _log_test_results(

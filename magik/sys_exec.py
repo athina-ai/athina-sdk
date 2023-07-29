@@ -2,7 +2,7 @@ import asyncio
 import os
 import json
 import subprocess
-from magik.internal_logger import logger
+from .internal_logger import logger
 
 
 def execute_command(command, confirm=True, log=True):
@@ -11,7 +11,8 @@ def execute_command(command, confirm=True, log=True):
         if confirmation != "y":
             return
 
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    result = subprocess.run(command, shell=True,
+                            capture_output=True, text=True)
 
     if result.returncode == 0:
         if log:
@@ -69,7 +70,8 @@ def create_file(filepath):
     os.makedirs(
         directory, exist_ok=True
     )  # Create parent directories if they don't exist
-    open(filepath, "a").close()  # Create an empty file at the specified filepath
+    # Create an empty file at the specified filepath
+    open(filepath, "a").close()
 
 
 def touch(file_path, confirm=False):

@@ -1,16 +1,17 @@
 import json
 import os
 import requests
-from magik.internal_logger import logger
-from magik.constants import CONFIG_FILE_PATH, DEPLOY_URL, TEST_DIR, TEST_RUNS_DIR
-from magik.run import Run
-from magik.config import get_magik_api_key
+from .internal_logger import logger
+from .constants import CONFIG_FILE_PATH, DEPLOY_URL, TEST_DIR, TEST_RUNS_DIR
+from .run import Run
+from .config import get_magik_api_key
 
 
 def deploy_test(test_name: str):
     api_key = get_magik_api_key()
     if api_key == None:
-        logger.error(f"No API key found. Please add your API key to {CONFIG_FILE_PATH}")
+        logger.error(
+            f"No API key found. Please add your API key to {CONFIG_FILE_PATH}")
 
     # construct the file path
     file_path = f"{TEST_DIR}/{test_name}/assertions.py"

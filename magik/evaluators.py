@@ -4,12 +4,12 @@ import json
 import re
 import ast
 import numpy as np
-from magik.openai_helper import OpenAI
-from magik.utils import standardize_url, generate_grading_prompt
-from magik.constants import OPEN_AI_DEFAULT_MODEL
-from magik.decorators import magik_eval
-from magik.similarity import similarity_score
-from magik.classifier import classify_output
+from .openai_helper import OpenAI
+from .utils import standardize_url, generate_grading_prompt
+from .constants import OPEN_AI_DEFAULT_MODEL
+from .decorators import magik_eval
+from .similarity import similarity_score
+from .classifier import classify_output
 
 
 @magik_eval
@@ -38,7 +38,8 @@ def contains_all(keywords, case_sensitive=False, output_to_test=None):
             missing_keywords.append(keyword)
     if (len(missing_keywords)) > 0:
         result = False
-        reason = f"keywords not found in output: " + ", ".join(missing_keywords)
+        reason = f"keywords not found in output: " + \
+            ", ".join(missing_keywords)
     else:
         result = True
         reason = f"{len(keywords)}/{len(keywords)} keywords found in output"

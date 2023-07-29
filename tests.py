@@ -1,5 +1,4 @@
 import openai
-from magik.logger import logChatResponse
 from magik.config import get_open_ai_api_key
 
 if __name__ == "__main__":
@@ -10,11 +9,4 @@ if __name__ == "__main__":
     response = openai.ChatCompletion.create(
         model=model,
         messages=[{"role": "user", "content": prompt_text}],
-    )
-    logChatResponse(
-        prompt_slug="hello_human",  # This is used for you to separate different prompts on our analytics dashboard
-        prompt_sent=prompt_text,
-        model=model,
-        chat_completion=response,
-        testId="human_test",  # This is how we associate which tests are run with which prompts
     )
