@@ -22,6 +22,7 @@ class Run:
         self.saved_prompt_response = ""
         self.test_loader = TestLoader(test_dir=test_dir)
         self.test_runs_dir = test_runs_dir
+        self.openai = OpenAI()
 
     def run_tests(
         self,
@@ -156,32 +157,19 @@ class Run:
     def _run_individual_test_for_prompt(
         self, test: Test, raw_prompt: str, model: str, log_file_path: str
     ) -> IndividualTestRunResult:
-        openai = OpenAI()
         prompt_vars = test["prompt_vars"]
-        prompt = raw_prompt
-        prompt_response = self.saved_prompt_response
-        if model == "gpt-3.5-turbo":
-            if len(prompt_vars) == 0:
-                if len(self.saved_prompt_response) == 0:
-                    self.saved_prompt_response = openai.openai_chat_completion_message(
-                        model=model, prompt=prompt
-                    )
-            else:
-                prompt = substitute_vars(raw_prompt, prompt_vars)
-                prompt_response = openai.openai_chat_completion_message(
-                    model=model, prompt=prompt
-                )
-        elif model == "text-davinci-003":
-            if len(prompt_vars) == 0:
-                if len(self.saved_prompt_response) == 0:
-                    self.saved_prompt_response = openai.openai_completion_message(
-                        model=model, prompt=prompt
-                    )
-            else:
-                prompt = substitute_vars(raw_prompt, prompt_vars)
-                prompt_response = openai.openai_completion_message(
-                    model=model, prompt=prompt
-                )
+        prompt = substitute_vars(raw_prompt, prompt_vars) if prompt_vars else raw_prompt
+        prompt_response = None
+
+        # Use cached response ONLY if there are no prompt vars
+        # AND if there is a cached response with length > 0
+        if not prompt_vars and len(self.saved_prompt_response) > 0:
+            prompt_response = self.saved_prompt_response
+        else:
+            self.saved_prompt_response = self.openai.get_openai_response_message(
+                model, prompt
+            )
+            prompt_response = self.saved_prompt_response
 
         return self._run_individual_test_for_prompt_response(
             test=test,

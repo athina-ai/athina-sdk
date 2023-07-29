@@ -71,7 +71,14 @@ def generate(args):
 def run(args):
     test_runner = Run(test_dir=TEST_DIR, test_runs_dir=TEST_RUNS_DIR)
     number_of_runs = int(args.number_of_runs) if args.number_of_runs else 1
-    test_runner.run_tests(args.test_name, args.model, args.response, number_of_runs)
+    model = args.model if args.model else "gpt-3.5-turbo"
+    response = args.response if args.response else None
+    test_runner.run_tests(
+        args.test_name,
+        model=model,
+        response=response,
+        number_of_runs=number_of_runs,
+    )
 
 
 def deploy(args):

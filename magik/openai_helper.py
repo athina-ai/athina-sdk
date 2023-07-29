@@ -7,6 +7,11 @@ from .config import (
     get_magik_api_key,
 )
 
+chat_completion_models = ["gpt-3.5-turbo", "gpt-4"]
+completion_models = ["text-davinci-003"]
+is_chat_model = lambda model: model in chat_completion_models
+is_completion_model = lambda model: model in completion_models
+
 
 class OpenAI:
     def __init__(self):
@@ -38,7 +43,24 @@ class OpenAI:
             "embedding"
         ]
 
+    # Convenience method to call openai completion or chat completion
+    def get_openai_response(self, model, prompt):
+        if is_chat_model(model):
+            return self.openai_chat_completion(model=model, prompt=prompt)
+        elif is_completion_model(model):
+            return self.openai_completion(model=model, prompt=prompt)
+        else:
+            raise ValueError("Invalid model: {}".format(model))
+
     # Convenience methods that call OpenAI and return just the message content string
+    def get_openai_response_message(self, model, prompt):
+        if is_chat_model(model):
+            return self.openai_chat_completion_message(model=model, prompt=prompt)
+        elif is_completion_model(model):
+            return self.openai_completion_message(model=model, prompt=prompt)
+        else:
+            raise ValueError("Invalid model: {}".format(model))
+
     def openai_chat_completion_message(self, model, prompt):
         """
         Call the OpenAI API to generate a chat completion for models like GPT 3.5 turbo and GPT 4
