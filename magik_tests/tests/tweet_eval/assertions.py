@@ -8,6 +8,7 @@ from magik.evaluators import (
     contains,
     negate,
 )
+from typing import Any, Dict
 
 
 @magik_eval
@@ -18,7 +19,7 @@ def custom_function(output_to_test):
     }
 
 
-test_context = {}
+test_context: Dict[str, Any] = {}
 
 
 # Define tests here

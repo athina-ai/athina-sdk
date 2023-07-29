@@ -45,10 +45,8 @@ def log_test_run(
     else:
         logger.to_file_and_console(f"Test: {test_description}", color="cyan")
         logger.to_file_and_console(f"-----", color="cyan")
-        _log_prompt_results(
-            individual_test_run_result=individual_test_run_result)
-        _log_test_results(
-            individual_test_run_result=individual_test_run_result)
+        _log_prompt_results(individual_test_run_result=individual_test_run_result)
+        _log_test_results(individual_test_run_result=individual_test_run_result)
 
 
 def _log_prompt_results(
@@ -57,8 +55,7 @@ def _log_prompt_results(
     prompt = individual_test_run_result["prompt"]
     prompt_response = individual_test_run_result["prompt_response"]
     logger.to_file_and_console(f"Prompt: {prompt}\n", log_file)
-    logger.to_file_and_console(
-        f"Prompt Response: {prompt_response}\n", log_file)
+    logger.to_file_and_console(f"Prompt Response: {prompt_response}\n", log_file)
 
 
 def _log_test_results(
@@ -73,3 +70,49 @@ def _log_test_results(
     logger.to_file_and_console(f"Reason: {test_result_reason}", log_file)
     logger.to_file_and_console(f"Failure Labels: {failure_labels}", log_file)
     logger.to_file_and_console("\n", log_file)
+
+
+def _log_test_suite_results_as_csv(test_suite: TestSuiteResults, csv_file_path):
+    logger.info("Logging file to CSV: " + csv_file_path)
+    with open(csv_file_path, "w") as csv_file:
+        logger.to_file(
+            "description,prompt,response,number_of_runs,passed,failed,error,pass_rate,flakiness,runtime",
+            csv_file,
+        )
+        for _, test_run_result in test_suite.items():
+            test_description = test_run_result["test"]["description"]
+            prompt = test_run_result["prompt"]
+            prompt_response = test_run_result["prompt_response"]
+            test_run_stats = test_run_result["run_stats"]
+            passed = test_run_stats["passed"]
+            failed = test_run_stats["failed"]
+            error = test_run_stats["error"]
+            pass_rate = test_run_stats["pass_rate"]
+            flakiness = test_run_stats["flakiness"]
+            number_of_runs = test_run_stats["number_of_runs"]
+            runtime = test_run_stats["runtime"]
+
+            logger.to_file(
+                ""
+                + str(test_description)
+                + ","
+                + str(prompt)
+                + ","
+                + str(prompt_response)
+                + ","
+                + str(number_of_runs)
+                + ","
+                + str(passed)
+                + ","
+                + str(failed)
+                + ","
+                + str(error)
+                + ","
+                + str(pass_rate)
+                + ","
+                + str(flakiness)
+                + ","
+                + str(runtime)
+                + "",
+                csv_file,
+            )
