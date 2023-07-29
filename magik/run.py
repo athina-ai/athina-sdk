@@ -4,6 +4,7 @@ from magik.utils import substitute_vars
 from magik.openai_helper import OpenAI
 from magik.test_loader import TestLoader
 from magik.config import get_open_ai_default_model, get_magik_api_key
+from magik.sys_exec import read_from_file, create_file
 from magik.constants import RUN_URL
 from magik.metrics import calculate_flakiness_index
 from magik.types.test_run import (
@@ -29,6 +30,7 @@ class Run:
     def run_tests(
         self,
         test_name: str,
+        model: str,
         response: Optional[str] = None,
         number_of_runs: Optional[int] = 1,
     ):
@@ -50,6 +52,7 @@ class Run:
             self._run_tests_for_prompt(
                 test_suite=test_suite,
                 raw_prompt=raw_prompt,
+                model=model,
                 log_file_path=log_file_path,
                 number_of_runs=number_of_runs,
             )
@@ -102,7 +105,12 @@ class Run:
                 stats["flakiness"] = calculate_flakiness_index(pass_rate_percentage)
 
     def _run_tests_for_prompt(
-        self, test_suite: list, raw_prompt: str, log_file_path: str, number_of_runs: int
+        self,
+        test_suite: list,
+        raw_prompt: str,
+        model: str,
+        log_file_path: str,
+        number_of_runs: int,
     ):
         # Use this object to store the stats for each test
         test_suite_results = self._initialize_test_suite_result(test_suite)
@@ -113,6 +121,7 @@ class Run:
                 test_run_result = self._run_individual_test_for_prompt(
                     test=test,
                     raw_prompt=raw_prompt,
+                    model=model,
                     log_file_path=log_file_path,
                 )
                 test_suite_results[test["description"]]["run_details"].append(
@@ -149,23 +158,36 @@ class Run:
         log_test_suite_results(test_suite_results)
 
     def _run_individual_test_for_prompt(
-        self, test: Test, raw_prompt: str, log_file_path: str
+        self, test: Test, raw_prompt: str, model: str, log_file_path: str
     ) -> IndividualTestRunResult:
         openai = OpenAI()
         prompt_vars = test["prompt_vars"]
-        model = get_open_ai_default_model()
-        if len(prompt_vars) == 0:
-            prompt = raw_prompt
-            if len(self.saved_prompt_response) == 0:
-                self.saved_prompt_response = openai.openai_chat_completion_message(
+        if model == "gpt-3.5-turbo":
+            if len(prompt_vars) == 0:
+                prompt = raw_prompt
+                if len(self.saved_prompt_response) == 0:
+                    self.saved_prompt_response = openai.openai_chat_completion_message(
+                        model=model, prompt=prompt
+                    )
+                prompt_response = self.saved_prompt_response
+            else:
+                prompt = substitute_vars(raw_prompt, prompt_vars)
+                prompt_response = openai.openai_chat_completion_message(
                     model=model, prompt=prompt
                 )
-            prompt_response = self.saved_prompt_response
-        else:
-            prompt = substitute_vars(raw_prompt, prompt_vars)
-            prompt_response = openai.openai_chat_completion_message(
-                model=model, prompt=prompt
-            )
+        elif model == "text-davinci-003":
+            if len(prompt_vars) == 0:
+                prompt = raw_prompt
+                if len(self.saved_prompt_response) == 0:
+                    self.saved_prompt_response = openai.openai_completion_message(
+                        model=model, prompt=prompt
+                    )
+                prompt_response = self.saved_prompt_response
+            else:
+                prompt = substitute_vars(raw_prompt, prompt_vars)
+                prompt_response = openai.openai_completion_message(
+                    model=model, prompt=prompt
+                )
 
         return self._run_individual_test_for_prompt_response(
             test=test,
