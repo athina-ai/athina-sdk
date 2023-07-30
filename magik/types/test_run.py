@@ -28,21 +28,19 @@ class TestRunDetails(TypedDict):
     result: Optional[bool]
     reason: Optional[str]
     failure_labels: Optional[List[str]]
+    prompt: str
+    prompt_response: str
 
 
 class TestRunResult(TypedDict):
     test: Test
     run_stats: TestRunStats
     run_details: List[TestRunDetails]
-    prompt: str
-    prompt_response: str
 
 
 class IndividualTestRunResult(TypedDict):
     test: Test
     run_details: TestRunDetails
-    prompt: str
-    prompt_response: str
 
 
 TestSuiteResults = Dict[str, TestRunResult]

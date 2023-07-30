@@ -228,12 +228,12 @@ class Run:
         failure_labels = test["failure_labels"] if not did_test_pass else []
         return {
             "test": self._generate_test_object(test),
-            "prompt": prompt,
-            "prompt_response": prompt_response,
             "run_details": {
                 "result": did_test_pass,
                 "reason": eval_result_reason,
                 "failure_labels": failure_labels,
+                "prompt": prompt,
+                "prompt_response": prompt_response,
             },
         }
 
@@ -247,8 +247,6 @@ class Run:
         for test in test_suite:
             test_suite_results[test["description"]] = {
                 "test": self._generate_test_object(test),
-                "prompt": "",
-                "prompt_response": "",
                 "run_stats": {
                     "number_of_runs": 0,
                     "passed": 0,

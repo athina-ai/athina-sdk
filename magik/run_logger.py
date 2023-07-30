@@ -52,8 +52,8 @@ def log_test_run(
 def _log_prompt_results(
     individual_test_run_result: IndividualTestRunResult, log_file=None
 ):
-    prompt = individual_test_run_result["prompt"]
-    prompt_response = individual_test_run_result["prompt_response"]
+    prompt = individual_test_run_result["run_details"]["prompt"]
+    prompt_response = individual_test_run_result["run_details"]["prompt_response"]
     logger.to_file_and_console(f"Prompt: {prompt}\n", log_file)
     logger.to_file_and_console(f"Prompt Response: {prompt_response}\n", log_file)
 
@@ -76,13 +76,11 @@ def _log_test_suite_results_as_csv(test_suite: TestSuiteResults, csv_file_path):
     logger.info("Logging file to CSV: " + csv_file_path)
     with open(csv_file_path, "w") as csv_file:
         logger.to_file(
-            "description,prompt,response,number_of_runs,passed,failed,error,pass_rate,flakiness,runtime",
+            "description,number_of_runs,passed,failed,error,pass_rate,flakiness,runtime",
             csv_file,
         )
         for _, test_run_result in test_suite.items():
             test_description = test_run_result["test"]["description"]
-            prompt = test_run_result["prompt"]
-            prompt_response = test_run_result["prompt_response"]
             test_run_stats = test_run_result["run_stats"]
             passed = test_run_stats["passed"]
             failed = test_run_stats["failed"]
@@ -95,10 +93,6 @@ def _log_test_suite_results_as_csv(test_suite: TestSuiteResults, csv_file_path):
             logger.to_file(
                 ""
                 + str(test_description)
-                + ","
-                + str(prompt)
-                + ","
-                + str(prompt_response)
                 + ","
                 + str(number_of_runs)
                 + ","
