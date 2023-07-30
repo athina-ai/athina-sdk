@@ -3,7 +3,7 @@ from typing import TypedDict, Any, List, Dict, Optional
 
 # Type Definitions
 class EvalResult(TypedDict):
-    result: bool
+    result: Optional[bool]
     reason: str
 
 
