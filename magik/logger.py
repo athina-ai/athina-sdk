@@ -10,7 +10,7 @@ from .config import get_magik_api_key
 # model: string id of the language model used
 # chat_completion: "choices" json response from OpenAI chat completion
 def log_open_ai_chat_response(
-    prompt_slug, messages, model, chat_completion, response_time, context=None
+    prompt_slug, messages, model, chat_completion, response_time=None, context=None
 ):
     """
     Track the request and response.
@@ -35,7 +35,7 @@ def log_open_ai_chat_response(
 
 
 def log_open_ai_completion_response(
-    prompt_slug, message, model, completion, response_time, context=None
+    prompt_slug, message, model, completion, response_time=None, context=None
 ):
     """
     Track the request and response.
