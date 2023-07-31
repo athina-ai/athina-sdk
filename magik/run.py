@@ -1,30 +1,65 @@
-import os
 import requests
-import sys
-import importlib.util
-from datetime import datetime
-from magik.internal_logger import logger
-from magik.utils import substitute_vars
-from magik.openai_helper import OpenAI
-from magik.sys_exec import read_from_file, create_file
-from magik.config import get_open_ai_default_model, get_magik_api_key
-from magik.constants import RUN_URL
+from .internal_logger import logger
+from .utils import substitute_vars
+from .openai_helper import OpenAI
+from .test_loader import TestLoader
+from .config import get_magik_api_key
+from .constants import RUN_URL
+from .metrics import calculate_flakiness_index
+from .types.test_run import (
+    Test,
+    TestSuiteResults,
+    EvalResult,
+    IndividualTestRunResult,
+)
+from .run_logger import (
+    log_test_suite_results,
+    log_test_run,
+    _log_test_suite_results_as_csv,
+)
+from typing import TypedDict, Any, List, Dict, Optional
 
 
+# This class is responsible for running tests
 class Run:
-    def __init__(self, test_dir, test_runs_dir):
+    def __init__(self, test_dir: str, test_runs_dir: str):
         self.saved_prompt_response = ""
-        self.test_dir = test_dir
+        self.test_loader = TestLoader(test_dir=test_dir)
         self.test_runs_dir = test_runs_dir
+        self.openai = OpenAI()
 
-    def run_tests(self, test_name):
-        test_context = self._load_context(test_name)
-        tests = self._load_tests(test_name, test_context=test_context)
-        raw_prompt = self._load_prompt(test_name)
-        log_file_path = self._log_file_path()
-        self._run_tests_for_prompt(
-            tests=tests, raw_prompt=raw_prompt, log_file_path=log_file_path
+    def run_tests(
+        self,
+        test_name: str,
+        model: str,
+        response: Optional[str] = None,
+        number_of_runs: int = 1,
+        csv_file_path: Optional[str] = None,
+    ):
+        test_context = self.test_loader._load_context(test_name)
+        test_suite = self.test_loader._load_test_suite(
+            test_name, test_context=test_context
         )
+        raw_prompt = self.test_loader._load_prompt(test_name)
+        log_file_path = self._log_file_path()
+        if response:
+            self._run_tests_for_prompt_response(
+                test_suite=test_suite,
+                raw_prompt=raw_prompt,
+                prompt_response=response,
+                log_file_path=log_file_path,
+                number_of_runs=number_of_runs,
+                csv_file_path=csv_file_path,
+            )
+        else:
+            self._run_tests_for_prompt(
+                test_suite=test_suite,
+                raw_prompt=raw_prompt,
+                model=model,
+                log_file_path=log_file_path,
+                number_of_runs=number_of_runs,
+                csv_file_path=csv_file_path,
+            )
 
     def run_tests_in_prod(self, start_date, end_date, prompt_slug, test_slug):
         request_data = {
@@ -53,175 +88,202 @@ class Run:
             logger.error(f"ERROR: Failed to trigger test in prod: {response.text}")
             return
 
-    def _run_tests_for_prompt(self, tests, raw_prompt, log_file_path):
-        self._log_to_file_and_console("---------------")
-        self._log_to_file_and_console("TEST RESULTS")
-        self._log_to_file_and_console("---------------")
-        self._log_to_file_and_console("\n")
+    def _calculate_test_run_stats(self, test_suite_result_stats: TestSuiteResults):
+        for _, test_run_result in test_suite_result_stats.items():
+            # calculate percentage pass / fail for each test
+            stats = test_run_result["run_stats"]
+            for test_run_instance in test_run_result["run_details"]:
+                if test_run_instance["result"] == None:
+                    stats["error"] += 1
+                elif test_run_instance["result"]:
+                    stats["passed"] += 1
+                else:
+                    stats["failed"] += 1
 
-        num_tests_passed = 0
-        for test in tests:
-            test_result_obj = self._run_individual_test_for_prompt(
-                test=test, raw_prompt=raw_prompt, log_file_path=log_file_path
-            )
-            if test_result_obj["test_result"]["result"]:
-                num_tests_passed += 1
-
-        num_tests_failed = len(tests) - num_tests_passed
-
-        logger.info("\n------------")
-        if num_tests_passed == len(tests):
-            logger.info("✅ All tests passed")
-            logger.info("\n\n")
-        else:
-            logger.info(
-                f"""
-    ✅ {num_tests_passed}/{len(tests)} tests passed
-    ❌ {num_tests_failed}/{len(tests)} tests failed
-            """
-            )
-
-    def _run_individual_test_for_prompt(self, test, raw_prompt, log_file_path):
-        openai = OpenAI()
-        prompt_vars = test["prompt_vars"]
-        model = get_open_ai_default_model()
-        if len(prompt_vars) == 0:
-            prompt = raw_prompt
-            if len(self.saved_prompt_response) == 0:
-                self.saved_prompt_response = openai.openai_chat_completion_message(
-                    model=model, prompt=prompt
+            number_of_successful_runs = stats["passed"] + stats["failed"]
+            if number_of_successful_runs > 0:
+                pass_rate_percentage: float = round(
+                    (stats["passed"] / number_of_successful_runs) * 100, 2
                 )
-            prompt_response = self.saved_prompt_response
-        else:
-            prompt = substitute_vars(raw_prompt, prompt_vars)
-            prompt_response = openai.openai_chat_completion_message(
-                model=model, prompt=prompt
-            )
+                stats["pass_rate"] = pass_rate_percentage
+                stats["flakiness"] = calculate_flakiness_index(pass_rate_percentage)
 
-        return self._run_individual_test_for_prompt_response(
-            test=test,
-            prompt=prompt,
-            prompt_response=prompt_response,
-            log_file_path=log_file_path,
-        )
+    def _run_tests_for_prompt(
+        self,
+        test_suite: list,
+        raw_prompt: str,
+        model: str,
+        log_file_path: str,
+        number_of_runs: int,
+        csv_file_path: Optional[str],
+    ):
+        # Use this object to store the stats for each test
+        test_suite_results = self._initialize_test_suite_result(test_suite)
+
+        # Run the tests for the specified number of runs
+        for test in test_suite:
+            for _ in range(number_of_runs):
+                test_run_result = self._run_individual_test_for_prompt(
+                    test=test,
+                    raw_prompt=raw_prompt,
+                    model=model,
+                    log_file_path=log_file_path,
+                )
+                test_suite_results[test["description"]]["run_details"].append(
+                    test_run_result["run_details"]
+                )
+
+        self._calculate_test_run_stats(test_suite_results)
+        log_test_suite_results(test_suite_results)
+
+        if csv_file_path:
+            _log_test_suite_results_as_csv(test_suite_results, csv_file_path)
+
+    def _run_tests_for_prompt_response(
+        self,
+        test_suite: list,
+        raw_prompt: str,
+        prompt_response: str,
+        log_file_path: str,
+        number_of_runs: int,
+        csv_file_path: Optional[str],
+    ):
+        # Use this object to store the stats for each test
+        test_suite_results = self._initialize_test_suite_result(test_suite)
+
+        for test in test_suite:
+            for _ in range(number_of_runs):
+                test_run_result = self._run_individual_test_for_prompt_response(
+                    test=test,
+                    prompt=raw_prompt,
+                    prompt_response=prompt_response,
+                    log_file_path=log_file_path,
+                )
+                test_suite_results[test["description"]]["run_details"].append(
+                    test_run_result["run_details"]
+                )
+
+        self._calculate_test_run_stats(test_suite_results)
+        log_test_suite_results(test_suite_results)
+
+        if csv_file_path:
+            _log_test_suite_results_as_csv(test_suite_results, csv_file_path)
+
+    def _run_individual_test_for_prompt(
+        self, test: Test, raw_prompt: str, model: str, log_file_path: str
+    ) -> IndividualTestRunResult:
+        prompt_vars = test["prompt_vars"]
+        prompt = substitute_vars(raw_prompt, prompt_vars) if prompt_vars else raw_prompt
+        prompt_response = None
+
+        try:
+            # Use cached response ONLY if there are no prompt vars
+            # AND if there is a cached response with length > 0
+            if not prompt_vars and len(self.saved_prompt_response) > 0:
+                prompt_response = self.saved_prompt_response
+            else:
+                self.saved_prompt_response = self.openai.get_openai_response_message(
+                    model, prompt
+                )
+                prompt_response = self.saved_prompt_response
+
+            return self._run_individual_test_for_prompt_response(
+                test=test,
+                prompt=prompt,
+                prompt_response=prompt_response,
+                log_file_path=log_file_path,
+            )
+        except Exception as e:
+            logger.error(
+                f"ERROR: Failed to run test: {test['description']} with error: {str(e)}"
+            )
+            return self._generate_test_run_result(
+                test=test,
+                eval_result={
+                    "result": None,
+                    "reason": f"Error running test {str(e)}",
+                },
+                prompt=prompt,
+                prompt_response=prompt_response,
+            )
 
     def _run_individual_test_for_prompt_response(
-        self, test, prompt, prompt_response, log_file_path
-    ):
-        test_function_result_obj = test["eval"](prompt_response)
-        result_obj = self._generate_result_object(
-            test=test,
-            test_result=test_function_result_obj,
-            prompt=prompt,
-            prompt_response=prompt_response,
-        )
+        self, test: Test, prompt: str, prompt_response: str, log_file_path: str
+    ) -> IndividualTestRunResult:
+        try:
+            eval_result = test["eval"](prompt_response)
+            individual_test_run_result = self._generate_test_run_result(
+                test=test,
+                eval_result=eval_result,
+                prompt=prompt,
+                prompt_response=prompt_response,
+            )
 
-        self._log_results(
-            result_obj,
-            log_file_path=log_file_path,
-        )
+            log_test_run(
+                individual_test_run_result=individual_test_run_result,
+                log_file_path=log_file_path,
+            )
 
-        return result_obj
+            return individual_test_run_result
+        except Exception as e:
+            logger.error(
+                f"ERROR: Failed to run test: {test['description']} with error: {str(e)}"
+            )
+            return self._generate_test_run_result(
+                test=test,
+                eval_result={
+                    "result": None,
+                    "reason": f"Error running test {str(e)}",
+                },
+                prompt=prompt,
+                prompt_response=prompt_response,
+            )
 
-    def _load_prompt(self, test_name):
-        test_file_path = f"{self.test_dir}/{test_name}/prompt.txt"
-        absolute_path = os.path.abspath(test_file_path)
-        return read_from_file(absolute_path)
-
-    def _load_attr_from_test_file(self, test_name, attr_name, default_value=None):
-        test_file_path = f"{self.test_dir}/{test_name}/assertions.py"
-        # Get the absolute path by resolving against the current working directory
-        absolute_path = os.path.abspath(test_file_path)
-
-        # Get the directory path and module name from the absolute path
-        directory, module_name = os.path.split(absolute_path)
-        module_name = os.path.splitext(module_name)[0]
-
-        # Load the module dynamically
-        spec = importlib.util.spec_from_file_location(module_name, absolute_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-
-        # Access the `tests` array from the module
-        return getattr(module, attr_name, default_value)
-
-    def _load_define_tests_fn(self, test_name):
-        return self._load_attr_from_test_file(
-            test_name=test_name, attr_name="define_tests", default_value=lambda _: []
-        )
-
-    def _load_context(self, test_name):
-        return self._load_attr_from_test_file(
-            test_name=test_name, attr_name="test_context", default_value=None
-        )
-
-    def _load_tests(self, test_name, test_context):
-        define_tests_fn = self._load_define_tests_fn(test_name)
-        return define_tests_fn(test_context)
-
-    def _generate_test_object(self, test):
+    def _generate_test_object(self, test: Test) -> Test:
         test_function_name = test["eval"].__name__
         return {
-            **test,
+            "description": test["description"],
             "eval": test_function_name,
+            "prompt_vars": test["prompt_vars"],
+            "failure_labels": test["failure_labels"],
         }
 
-    def _generate_result_object(self, test, test_result, prompt, prompt_response):
-        did_test_pass = test_result["result"]
+    def _generate_test_run_result(
+        self, test: Test, eval_result: EvalResult, prompt, prompt_response
+    ) -> IndividualTestRunResult:
+        did_test_pass = eval_result["result"]
+        eval_result_reason = eval_result["reason"]
         failure_labels = test["failure_labels"] if not did_test_pass else []
         return {
             "test": self._generate_test_object(test),
-            "test_result": test_result,
-            "prompt": prompt,
-            "prompt_response": prompt_response,
-            "failure_labels": failure_labels,
+            "run_details": {
+                "result": did_test_pass,
+                "reason": eval_result_reason,
+                "failure_labels": failure_labels,
+                "prompt": prompt,
+                "prompt_response": prompt_response,
+            },
         }
-
-    def _log_results(self, result_obj, log_file_path=None):
-        sys.stdout.flush()  # Flush the stdout buffer to ensure immediate printing to the console
-        test_description = result_obj["test"]["description"]
-        if log_file_path is not None:
-            create_file(log_file_path)
-            with open(log_file_path, "a") as log_file:
-                self._log_to_file_and_console(
-                    f"Test: {test_description}", log_file, color="cyan"
-                )
-                self._log_to_file_and_console(f"-----", log_file, color="cyan")
-                self._log_prompt_results(result_obj, log_file)
-                self._log_test_results(result_obj, log_file)
-        else:
-            self._log_to_file_and_console(f"Test: {test_description}", color="cyan")
-            self._log_to_file_and_console(f"-----", color="cyan")
-            self._log_prompt_results(result_obj)
-            self._log_test_results(result_obj)
-
-    def _log_to_file_and_console(self, output, log_file=None, color=None):
-        if log_file is not None:
-            log_file.write(output + "\n")
-            log_file.flush()  # Ensure immediate writing to the file
-
-        if color is not None:
-            logger.log_with_color(output, color)
-        else:
-            logger.info(output)
-
-    def _log_prompt_results(self, result_obj, log_file=None):
-        prompt = result_obj["prompt"]
-        prompt_response = result_obj["prompt_response"]
-        self._log_to_file_and_console(f"Prompt: {prompt}\n", log_file)
-        self._log_to_file_and_console(f"Prompt Response: {prompt_response}\n", log_file)
-
-    def _log_test_results(self, result_obj, log_file=None):
-        test_function_result_bool = result_obj["test_result"]["result"]
-        test_result_str = "✅ Passed" if test_function_result_bool else "❌ Failed"
-        test_result_reason = result_obj["test_result"]["reason"]
-        failure_labels = result_obj["failure_labels"]
-
-        self._log_to_file_and_console(f"Test Result: {test_result_str}", log_file)
-        self._log_to_file_and_console(f"Reason: {test_result_reason}", log_file)
-        self._log_to_file_and_console(f"Failure Labels: {failure_labels}", log_file)
-        self._log_to_file_and_console("\n", log_file)
 
     def _log_file_path(self):
         log_file_path = f"{self.test_runs_dir}/log.txt"
         return log_file_path
+
+    def _initialize_test_suite_result(self, test_suite: List[Test]) -> TestSuiteResults:
+        # Use this object to store the stats for each test
+        test_suite_results: TestSuiteResults = {}
+        for test in test_suite:
+            test_suite_results[test["description"]] = {
+                "test": self._generate_test_object(test),
+                "run_stats": {
+                    "number_of_runs": 0,
+                    "passed": 0,
+                    "failed": 0,
+                    "error": 0,
+                    "pass_rate": None,
+                    "flakiness": None,
+                    "runtime": None,
+                },
+                "run_details": [],
+            }
+        return test_suite_results

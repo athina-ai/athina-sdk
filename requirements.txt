@@ -12,3 +12,7 @@ openai==0.27.8
 requests==2.31.0
 tqdm==4.65.0
 urllib3==1.26.16
+numpy==1.25.1
+mypy==1.4.1
+types-requests==2.31.0.2
+tenacity==8.2.2

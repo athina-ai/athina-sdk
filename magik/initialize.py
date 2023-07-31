@@ -1,7 +1,7 @@
 import os
-from magik.internal_logger import logger
-from magik.sys_exec import write_to_file
-from magik.constants import (
+from .internal_logger import logger
+from .sys_exec import write_to_file
+from .constants import (
     TEST_RUNS_DIR,
     TEST_DIR,
     CONFIG_FILE_PATH,

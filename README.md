@@ -7,12 +7,12 @@ Reliability of output is one of the biggest challenges for people trying to use 
 
 Since LLM outputs are non-deterministic, it’s very hard to measure how good the output is.
 
-Eyeballing the responses from an LLM can work in development, but it’s not a great solution. 
+Eyeballing the responses from an LLM can work in development, but it’s not a great solution.
 
 > _In production, it’s virtually impossible to eyeball thousands of responses. Which means you have very little visibility into how well your LLM is performing._
 
 - Do you know when your LLM app is hallucinating?
-- How do you know how well it's *really* performing?
+- How do you know how well it's _really_ performing?
 - Do you know how often it’s producing a critically bad output?
 - How do you know what your users are seeing?
 - How do you measure how good your LLM responses are? And if you can’t measure it, how do you improve the accuracy?
@@ -23,11 +23,10 @@ Eyeballing the responses from an LLM can work in development, but it’s not a g
 
 <img width="1576" alt="llm-screenshot-1" src="https://github.com/magiklabs/magik-sdk/assets/7515552/bc87aefa-505f-4732-84cd-b7fe57857850">
 
-
 <br /><br /><br />
 
-
 # Documentation
+
 `pip install magik`
 
 See https://docs.magiklabs.app for instructions on how to write and run tests.
@@ -63,9 +62,9 @@ For example, assuming your prompt looks like this:
 ```
 Create some marketing copy for a tweet of less than 280 characters for my app {app_name}.
 
-My app helps people generate sales emails using AI. 
+My app helps people generate sales emails using AI.
 
-Make sure the marketing copy contains a complete and valid link to my app. 
+Make sure the marketing copy contains a complete and valid link to my app.
 
 Here is the link to my app: https://magiklabs.app.
 ```
@@ -81,51 +80,53 @@ from magik.evaluators import (
     length_less_than,
 )
 
-
+# Local context - this is used as the "ground truth" data that you can compare against in your tests
+test_context = {}
 
 # Define tests here
-tests = [
-    {
-        "description": "output contains a link",
-        "eval": contains_link(),
-        "prompt_vars": {
-            "app_name": "Uber",
+def define_tests(context: dict):
+    return [
+        {
+            "description": "output contains a link",
+            "eval": contains_link(),
+            "prompt_vars": {
+                "app_name": "Uber",
+            },
+            "failure_labels": ["bad_response_format"],
         },
-        "failure_labels": ["bad_response_format"],
-    },
-    {
-        "description": "output contains a valid link",
-        "eval": contains_valid_link(),
-        "prompt_vars": {
-            "app_name": "Magik",
+        {
+            "description": "output contains a valid link",
+            "eval": contains_valid_link(),
+            "prompt_vars": {
+                "app_name": "Magik",
+            },
+            "failure_labels": ["bad_response_format"],
         },
-        "failure_labels": ["bad_response_format"],
-    },
-    {
-        "description": "output sentiment is positive",
-        "eval": is_positive_sentiment(),
-        "prompt_vars": {
-            "app_name": "Lyft",
+        {
+            "description": "output sentiment is positive",
+            "eval": is_positive_sentiment(),
+            "prompt_vars": {
+                "app_name": "Lyft",
+            },
+            "failure_labels": ["negative_sentiment"],
         },
-        "failure_labels": ["negative_sentiment"],
-    },
-    {
-        "description": "output length is less than 280 characters",
-        "eval": length_less_than(280),
-        "prompt_vars": {
-            "app_name": "Facebook",
+        {
+            "description": "output length is less than 280 characters",
+            "eval": length_less_than(280),
+            "prompt_vars": {
+                "app_name": "Facebook",
+            },
+            "failure_labels": ["negative_sentiment", "critical"],
         },
-        "failure_labels": ["negative_sentiment", "critical"],
-    },
-    {
-        "description": "output does not contain hashtags",
-        "eval": contains_none(['#']),
-        "prompt_vars": {
-            "app_name": "Datadog",
+        {
+            "description": "output does not contain hashtags",
+            "eval": contains_none(['#']),
+            "prompt_vars": {
+                "app_name": "Datadog",
+            },
+            "failure_labels": ["bad_response_format"],
         },
-        "failure_labels": ["bad_response_format"],
-    },
-]
+    ]
 ```
 
 <br /><br />
@@ -147,7 +148,6 @@ You can use our **evaluation & monitoring platform** to:
 See https://magiklabs.app for more details, or contact us at [hello@magiklabs.app](mailto:hello@magiklabs.app)
 
 <br /><br />
-
 
 ### Upcoming Features
 

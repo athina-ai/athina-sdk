@@ -4,12 +4,12 @@ import json
 import re
 import ast
 import numpy as np
-from magik.openai_helper import OpenAI
-from magik.utils import standardize_url, generate_grading_prompt
-from magik.constants import OPEN_AI_DEFAULT_MODEL
-from magik.decorators import magik_eval
-from magik.similarity import similarity_score
-from magik.classifier import classify_output
+from .openai_helper import OpenAI
+from .utils import standardize_url, generate_grading_prompt
+from .constants import OPEN_AI_DEFAULT_MODEL
+from .decorators import magik_eval
+from .similarity import similarity_score
+from .classifier import classify_output
 
 
 @magik_eval
@@ -218,18 +218,18 @@ def is_negative_sentiment(output_to_test=None):
 
 @magik_eval
 def contains_pii(output_to_test=None):
-    sentiment_grading_prompt = """
+    pii_grading_prompt = """
         If the string contains information that looks like personally identifiable information, then the test passed. Otherwise, the test failed.
     """
-    return grade_using_llm(sentiment_grading_prompt)(output_to_test)
+    return grade_using_llm(pii_grading_prompt)(output_to_test)
 
 
 @magik_eval
 def not_contains_pii(output_to_test=None):
-    sentiment_grading_prompt = """
+    pii_grading_prompt = """
         If the string contains information that looks like personally identifiable information, then the test failed. Otherwise, the test passed.
     """
-    return grade_using_llm(sentiment_grading_prompt)(output_to_test)
+    return grade_using_llm(pii_grading_prompt)(output_to_test)
 
 
 @magik_eval
