@@ -38,8 +38,7 @@ def contains_all(keywords, case_sensitive=False, output_to_test=None):
             missing_keywords.append(keyword)
     if (len(missing_keywords)) > 0:
         result = False
-        reason = f"keywords not found in output: " + \
-            ", ".join(missing_keywords)
+        reason = f"keywords not found in output: " + ", ".join(missing_keywords)
     else:
         result = True
         reason = f"{len(keywords)}/{len(keywords)} keywords found in output"
@@ -219,18 +218,18 @@ def is_negative_sentiment(output_to_test=None):
 
 @magik_eval
 def contains_pii(output_to_test=None):
-    sentiment_grading_prompt = """
+    pii_grading_prompt = """
         If the string contains information that looks like personally identifiable information, then the test passed. Otherwise, the test failed.
     """
-    return grade_using_llm(sentiment_grading_prompt)(output_to_test)
+    return grade_using_llm(pii_grading_prompt)(output_to_test)
 
 
 @magik_eval
 def not_contains_pii(output_to_test=None):
-    sentiment_grading_prompt = """
+    pii_grading_prompt = """
         If the string contains information that looks like personally identifiable information, then the test failed. Otherwise, the test passed.
     """
-    return grade_using_llm(sentiment_grading_prompt)(output_to_test)
+    return grade_using_llm(pii_grading_prompt)(output_to_test)
 
 
 @magik_eval

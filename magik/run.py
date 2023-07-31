@@ -176,40 +176,68 @@ class Run:
         prompt = substitute_vars(raw_prompt, prompt_vars) if prompt_vars else raw_prompt
         prompt_response = None
 
-        # Use cached response ONLY if there are no prompt vars
-        # AND if there is a cached response with length > 0
-        if not prompt_vars and len(self.saved_prompt_response) > 0:
-            prompt_response = self.saved_prompt_response
-        else:
-            self.saved_prompt_response = self.openai.get_openai_response_message(
-                model, prompt
-            )
-            prompt_response = self.saved_prompt_response
+        try:
+            # Use cached response ONLY if there are no prompt vars
+            # AND if there is a cached response with length > 0
+            if not prompt_vars and len(self.saved_prompt_response) > 0:
+                prompt_response = self.saved_prompt_response
+            else:
+                self.saved_prompt_response = self.openai.get_openai_response_message(
+                    model, prompt
+                )
+                prompt_response = self.saved_prompt_response
 
-        return self._run_individual_test_for_prompt_response(
-            test=test,
-            prompt=prompt,
-            prompt_response=prompt_response,
-            log_file_path=log_file_path,
-        )
+            return self._run_individual_test_for_prompt_response(
+                test=test,
+                prompt=prompt,
+                prompt_response=prompt_response,
+                log_file_path=log_file_path,
+            )
+        except Exception as e:
+            logger.error(
+                f"ERROR: Failed to run test: {test['description']} with error: {str(e)}"
+            )
+            return self._generate_test_run_result(
+                test=test,
+                eval_result={
+                    "result": None,
+                    "reason": f"Error running test {str(e)}",
+                },
+                prompt=prompt,
+                prompt_response=prompt_response,
+            )
 
     def _run_individual_test_for_prompt_response(
         self, test: Test, prompt: str, prompt_response: str, log_file_path: str
     ) -> IndividualTestRunResult:
-        eval_result = test["eval"](prompt_response)
-        individual_test_run_result = self._generate_test_run_result(
-            test=test,
-            eval_result=eval_result,
-            prompt=prompt,
-            prompt_response=prompt_response,
-        )
+        try:
+            eval_result = test["eval"](prompt_response)
+            individual_test_run_result = self._generate_test_run_result(
+                test=test,
+                eval_result=eval_result,
+                prompt=prompt,
+                prompt_response=prompt_response,
+            )
 
-        log_test_run(
-            individual_test_run_result=individual_test_run_result,
-            log_file_path=log_file_path,
-        )
+            log_test_run(
+                individual_test_run_result=individual_test_run_result,
+                log_file_path=log_file_path,
+            )
 
-        return individual_test_run_result
+            return individual_test_run_result
+        except Exception as e:
+            logger.error(
+                f"ERROR: Failed to run test: {test['description']} with error: {str(e)}"
+            )
+            return self._generate_test_run_result(
+                test=test,
+                eval_result={
+                    "result": None,
+                    "reason": f"Error running test {str(e)}",
+                },
+                prompt=prompt,
+                prompt_response=prompt_response,
+            )
 
     def _generate_test_object(self, test: Test) -> Test:
         test_function_name = test["eval"].__name__
