@@ -10,6 +10,8 @@ from .constants import OPEN_AI_DEFAULT_MODEL
 from .decorators import magik_eval
 from .similarity import similarity_score
 from .classifier import classify_output
+from .similarity import levenshtein_distance
+from typing import Any
 
 
 @magik_eval
@@ -242,6 +244,38 @@ def contains_link(output_to_test=None):
         return {"result": False, "reason": "No link found in output"}
 
 
+# Checks that there are no invalid links in the output
+# If there is no link, this test will pass
+# If there is a valid link, this test will pass
+# If there is an invalid link (ex: 404), this test will fail
+@magik_eval
+def no_invalid_links(output_to_test=None):
+    pattern = r"(?!.*@)(?:https?://)?(?:www\.)?\S+\.\S+"
+    link_match = re.search(pattern=pattern, string=output_to_test)
+    if link_match:
+        matched_url = link_match.group()
+        if matched_url:
+            standardized_url = standardize_url(matched_url)
+            try:
+                response = requests.head(standardized_url)
+                if response.status_code == 200:
+                    return {
+                        "result": True,
+                        "reason": f"link {matched_url} found in output and is valid",
+                    }
+                else:
+                    return {
+                        "result": False,
+                        "reason": f"link {matched_url} found in output but is invalid",
+                    }
+            except:
+                return {
+                    "result": False,
+                    "reason": f"link {matched_url} found in output but is invalid",
+                }
+    return {"result": True, "reason": f"no link found in output"}
+
+
 @magik_eval
 def contains_valid_link(output_to_test=None):
     pattern = r"(?!.*@)(?:https?://)?(?:www\.)?\S+\.\S+"
@@ -407,3 +441,69 @@ def api_call(
         "result": result,
         "reason": reason,
     }
+
+
+@magik_eval
+def levenshtein_distance_below_threshold(
+    compare_against: str,
+    threshold: float,
+    output_to_test=None,
+):
+    distance = levenshtein_distance(output_to_test, compare_against)
+    result = distance < threshold
+    reason = (
+        f"levenshtein distance is {distance} and is below threshold {threshold}"
+        if result
+        else f"levenshtein distance is {distance} and is not below threshold {threshold}"
+    )
+    return {
+        "result": result,
+        "reason": reason,
+    }
+
+
+@magik_eval
+def levenshtein_distance_above_threshold(
+    compare_against: str,
+    threshold: float,
+    output_to_test=None,
+):
+    distance = levenshtein_distance(output_to_test, compare_against)
+    result = distance > threshold
+    reason = (
+        f"levenshtein distance is {distance} and is above threshold {threshold}"
+        if result
+        else f"levenshtein distance is {distance} and is not above threshold {threshold}"
+    )
+    return {
+        "result": result,
+        "reason": reason,
+    }
+
+
+@magik_eval
+def _and(functions: list[Any], output_to_test=None):
+    for fn in functions:
+        fn_res = fn(output_to_test)
+        result = fn_res["result"]
+        if result == False:
+            reason = fn_res["reason"]
+            return {
+                "result": result,
+                "reason": f"Function {fn.__name__} failed with reason: {reason}",
+            }
+    return {"result": True, "reason": "All functions returned True"}
+
+
+@magik_eval
+def _or(functions: list[Any], output_to_test=None):
+    for fn in functions:
+        fn_res = fn(output_to_test)
+        result = fn_res["result"]
+        if result == True:
+            reason = fn_res["reason"]
+            return {
+                "result": result,
+                "reason": f"Function {fn.__name__} passed with reason: {reason}",
+            }
+    return {"result": True, "reason": "All functions returned False"}
