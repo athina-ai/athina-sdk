@@ -5,6 +5,7 @@ from .internal_logger import logger
 from .constants import CONFIG_FILE_PATH, DEPLOY_URL, TEST_DIR, TEST_RUNS_DIR
 from .run import Run
 from .config import get_magik_api_key
+from .test_loader import TestLoader
 
 
 def deploy_test(test_name: str):
@@ -26,9 +27,9 @@ def deploy_test(test_name: str):
         file_content = f.read()
 
     # prepare data for API request
-    test_runner = Run(test_dir=TEST_DIR, test_runs_dir=TEST_RUNS_DIR)
-    test_context = test_runner._load_context(test_name)
-    test_suite = test_runner._load_test_suite(
+    test_loader = TestLoader(test_dir=TEST_DIR)
+    test_context = test_loader._load_context(test_name)
+    test_suite = test_loader._load_test_suite(
         test_name=test_name, test_context=test_context
     )
     test_suite = list(
