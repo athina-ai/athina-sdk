@@ -2,8 +2,7 @@ import json
 import os
 import requests
 from .internal_logger import logger
-from .constants import CONFIG_FILE_PATH, DEPLOY_URL, TEST_DIR, TEST_RUNS_DIR
-from .run import Run
+from .constants import CONFIG_FILE_PATH, DEPLOY_URL, TEST_DIR
 from .config import get_magik_api_key
 from .test_loader import TestLoader
 
