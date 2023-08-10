@@ -16,13 +16,16 @@ def log_open_ai_chat_response(
     messages,
     model,
     completion,
-    response_time=None,
     context=None,
-    environment=None,
+    response_time=None,
+    prompt_tokens: int = None,
+    completion_tokens: int = None,
+    total_tokens: int = None,
     customer_id=None,
     customer_user_id=None,
     session_id=None,
     user_query=None,
+    environment=None,
 ):
     """
     Track the request and response.
@@ -32,13 +35,16 @@ def log_open_ai_chat_response(
         "prompt_messages": messages,
         "language_model_id": model,
         "completion": completion,
-        "response_time": response_time,
         "context": context,
         "environment": environment,
         "customer_id": str(customer_id),
         "customer_user_id": str(customer_user_id),
         "session_id": str(session_id),
         "user_query": str(user_query),
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
+        "response_time": response_time,
     }
     # Remove None fields from the payload
     payload = {k: v for k, v in payload.items() if v is not None}
@@ -64,13 +70,16 @@ def log_open_ai_completion_response(
     prompt: str,
     model: str,
     completion,
-    response_time=None,
     context=None,
-    environment=None,
+    response_time=None,
+    prompt_tokens: int = None,
+    completion_tokens: int = None,
+    total_tokens: int = None,
     customer_id=None,
     customer_user_id=None,
     session_id=None,
     user_query=None,
+    environment=None,
 ):
     payload = {
         "prompt_slug": prompt_slug,
@@ -84,6 +93,9 @@ def log_open_ai_completion_response(
         "customer_user_id": str(customer_user_id),
         "session_id": str(session_id),
         "user_query": str(user_query),
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
     }
     # Remove None fields from the payload
     payload = {k: v for k, v in payload.items() if v is not None}
@@ -107,19 +119,23 @@ def log_generic_response(
     prompt_slug: str,
     prompt: str,
     llm_response: str,
-    response_time=None,
+    model: str,
     context=None,
-    environment=None,
+    response_time=None,
+    prompt_tokens: int = None,
+    completion_tokens: int = None,
+    total_tokens: int = None,
     customer_id=None,
     customer_user_id=None,
     session_id=None,
     user_query=None,
+    environment=None,
 ):
     payload = {
         "prompt_slug": prompt_slug,
         "prompt_text": prompt,
-        "language_model_id": "generic",
-        "completion": {"text": llm_response},
+        "language_model_id": model,
+        "prompt_response": llm_response,
         "response_time": response_time,
         "context": context,
         "environment": environment,
@@ -127,6 +143,9 @@ def log_generic_response(
         "customer_user_id": str(customer_user_id),
         "session_id": str(session_id),
         "user_query": str(user_query),
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
     }
     # Remove None fields from the payload
     payload = {k: v for k, v in payload.items() if v is not None}
