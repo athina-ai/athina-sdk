@@ -1,6 +1,6 @@
 from magik.decorators import magik_eval
 from magik.evaluators import (
-    contains_link,
+    contains_valid_link,
 )
 
 
@@ -11,11 +11,16 @@ from magik.evaluators import (
 #
 @magik_eval
 def is_valid_length(output_to_test):
-    result = len(output_to_test) > 1000
+    result = len(output_to_test) < 1000
     return {
         "result": result,
         "reason": "Output length is correct" if result else "Output length is invalid",
     }
+
+
+# Context is the ground truth data
+# If you have access to ground truth data, you can use it to define your tests
+test_context = {}
 
 
 # Every test must contain:
@@ -25,21 +30,22 @@ def is_valid_length(output_to_test):
 #   - dictionary of variable values to pass into the prompt
 #   - these will replace variables in curly {braces} in your prompt.txt file in local tests
 # - failure_labels: the labels to tag the failure with - used for the analytics dashboard
-tests = [
-    {
-        "description": "output contains a link",
-        "eval": contains_link(),
-        "prompt_vars": {
-            "app_name": "Magik",
+def define_tests(context: dict):
+    return [
+        {
+            "description": "output contains a valid link (no 404)",
+            "eval": contains_valid_link(),
+            "prompt_vars": {
+                "app_name": "Magik",
+            },
+            "failure_labels": [""],
         },
-        "failure_labels": ["bad_response_format"],
-    },
-    {
-        "description": "output passes custom function",
-        "eval": is_valid_length(),
-        "prompt_vars": {
-            "app_name": "Magik",
+        {
+            "description": "output passes custom function",
+            "eval": is_valid_length(),
+            "prompt_vars": {
+                "app_name": "Magik",
+            },
+            "failure_labels": ["response_too_long"],
         },
-        "failure_labels": ["custom_failure"],
-    },
-]
+    ]

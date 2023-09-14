@@ -12,23 +12,38 @@ from .config import get_magik_api_key
 # response_time: response_time in milliseconds (optional)
 # context: any structured json data you wish to associate with the prompt response (useful for analytics and testing)
 def log_open_ai_chat_response(
-    prompt_slug, messages, model, chat_completion, response_time=None, context=None
+    prompt_slug,
+    messages,
+    model,
+    completion,
+    response_time=None,
+    context=None,
+    environment=None,
+    customer_id=None,
+    customer_user_id=None,
+    session_id=None,
+    user_query=None,
 ):
     """
     Track the request and response.
     """
     payload = {
         "prompt_slug": prompt_slug,
-        "prompt_data": messages,
+        "prompt_messages": messages,
         "language_model_id": model,
-        "completion": chat_completion,
+        "completion": completion,
         "response_time": response_time,
         "context": context,
+        "environment": environment,
+        "customer_id": str(customer_id),
+        "customer_user_id": str(customer_user_id),
+        "session_id": str(session_id),
+        "user_query": str(user_query),
     }
     # Remove None fields from the payload
     payload = {k: v for k, v in payload.items() if v is not None}
     requests.post(
-        f"{API_BASE_URL}/api/v1/savePromptAndResponse",
+        f"{API_BASE_URL}/api/v1/log/prompt/openai-chat",
         json=payload,
         headers={
             "magik-api-key": get_magik_api_key(),
@@ -46,24 +61,34 @@ def log_open_ai_chat_response(
 # context: any structured json data you wish to associate with the prompt response (useful for analytics and testing)
 def log_open_ai_completion_response(
     prompt_slug: str,
-    message: str,
+    prompt: str,
     model: str,
     completion,
     response_time=None,
     context=None,
+    environment=None,
+    customer_id=None,
+    customer_user_id=None,
+    session_id=None,
+    user_query=None,
 ):
     payload = {
         "prompt_slug": prompt_slug,
-        "prompt_data": {"text": message},
+        "prompt_text": prompt,
         "language_model_id": model,
         "completion": completion,
         "response_time": response_time,
         "context": context,
+        "environment": environment,
+        "customer_id": str(customer_id),
+        "customer_user_id": str(customer_user_id),
+        "session_id": str(session_id),
+        "user_query": str(user_query),
     }
     # Remove None fields from the payload
     payload = {k: v for k, v in payload.items() if v is not None}
     requests.post(
-        f"{API_BASE_URL}/api/v1/savePromptAndResponse",
+        f"{API_BASE_URL}/api/v1/log/prompt/openai-completion",
         json=payload,
         headers={
             "magik-api-key": get_magik_api_key(),
@@ -79,20 +104,34 @@ def log_open_ai_completion_response(
 # response_time: response_time in milliseconds (optional)
 # context: any structured json data you wish to associate with the prompt response (useful for analytics and testing)
 def log_generic_response(
-    prompt_slug: str, message: str, llm_response: str, response_time=None, context=None
+    prompt_slug: str,
+    prompt: str,
+    llm_response: str,
+    response_time=None,
+    context=None,
+    environment=None,
+    customer_id=None,
+    customer_user_id=None,
+    session_id=None,
+    user_query=None,
 ):
     payload = {
         "prompt_slug": prompt_slug,
-        "prompt_data": {"text": message},
+        "prompt_text": prompt,
         "language_model_id": "generic",
         "completion": {"text": llm_response},
         "response_time": response_time,
         "context": context,
+        "environment": environment,
+        "customer_id": str(customer_id),
+        "customer_user_id": str(customer_user_id),
+        "session_id": str(session_id),
+        "user_query": str(user_query),
     }
     # Remove None fields from the payload
     payload = {k: v for k, v in payload.items() if v is not None}
     requests.post(
-        f"{API_BASE_URL}/api/v1/savePromptAndResponse",
+        f"{API_BASE_URL}/api/v1/log/prompt/generic",
         json=payload,
         headers={
             "magik-api-key": get_magik_api_key(),
