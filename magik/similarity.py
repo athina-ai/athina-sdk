@@ -46,6 +46,7 @@ def levenshtein_distance(str1, str2):
             if str1[i - 1] == str2[j - 1]:
                 dp[i][j] = dp[i - 1][j - 1]
             else:
-                dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+                dp[i][j] = 1 + min(dp[i - 1][j], dp[i]
+                                   [j - 1], dp[i - 1][j - 1])
 
     return dp[m][n]
