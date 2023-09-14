@@ -52,7 +52,7 @@ class CallbackHandler(BaseCallbackHandler):
     def __init__(self, magik_api_key: Optional[str] ) -> None:
         self.run = Run(debug=True) # Create a single instance of Run
         self.magik_api_key = magik_api_key
-        self.output_dict = {} 
+        self.run_info = {} 
         
     def get_runs(self):
         return self.run.runs 
@@ -71,16 +71,16 @@ class CallbackHandler(BaseCallbackHandler):
         language_model_id = kwargs['invocation_params']['model']  # Get the model ID
         prompt_sent = ' '.join([str(message) for message in flattened_messages])  # Combine system and human messages
         # Create a new dict with the required information
-        self.run_info.update = {
+        self.run_info.update ({
             'user_query': user_query,
             'start_time': start_time,
             'language_model_id': language_model_id,
             'prompt_sent': prompt_sent
-        }
+        })
         print("\nLLM start:" ,self.run_info)
-        self.run.log_run(run_id, parent_run_id, serialized=serialized, messages=messages, start_time=start_time)
-        self.run.function_calls[run_id] = 'on_chat_model_start'  # Log the function call
-        self.run.runs[run_id].update(self.run_info)   
+        # self.run.log_run(run_id, parent_run_id, serialized=serialized, messages=messages, start_time=start_time)
+        # self.run.function_calls[run_id] = 'on_chat_model_start'  # Log the function call
+        # self.run.runs[run_id].update(self.run_info)   
 
     def on_chain_start(
         self, serialized: Dict[str, Any], inputs: Dict[str, Any], run_id: UUID, parent_run_id: Optional[UUID] = None,**kwargs: Any
@@ -137,6 +137,7 @@ class CallbackHandler(BaseCallbackHandler):
     #     print("\nFinal output:", self.output_dict)
         # return self.output_dict
     def on_llm_end(self, response: LLMResult, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
+        print("\non_llm_end called")
         end_time = time.time()
         token_usage = response.llm_output['token_usage']
         prompt_tokens = token_usage['prompt_tokens']
@@ -144,17 +145,22 @@ class CallbackHandler(BaseCallbackHandler):
         total_tokens = token_usage['total_tokens']
         prompt_completion = ', '.join([gen.text for gen in response.generations[0]])  # Join the prompt completions with a comma
 
-        # Create a new dict with the required information
-        self.run_info.update = {
+        # Calculate the total response time
+        response_time = end_time - self.run_info['start_time']
+
+        # Update the run_info dictionary with the required information
+        self.run_info.update({
             'prompt_response': prompt_completion,
             'completion_tokens': completion_tokens,
             'prompt_tokens': prompt_tokens,
             'total_tokens': total_tokens,
-            'end_time': end_time
-        }
+            'end_time': end_time,
+            'response_time': response_time  # Add the response time to the run_info dictionary
+        })
         print("\nLLM END:" ,self.run_info)
+        return self.run_info
         # Store the run dict in self.runs
-        self.run.runs[run_id].update(self.run_info)
+        # self.run.runs[run_id].update(self.run_info)
 
     # def on_llm_start(
     #     self, serialized: Dict[str, Any], prompts: List[str], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any
@@ -268,7 +274,7 @@ handler = CallbackHandler(magik_api_key="QNPKZp1q97kMfSIPoS6_1eNpllOU3l3a")
 
 chain = LLMChain(
     llm=ChatOpenAI(
-        openai_api_key="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"),
+        openai_api_key="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"),
     prompt=chat_prompt,
     output_parser=CommaSeparatedListOutputParser()
 )
