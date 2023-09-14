@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID
 import logging
 import time
-from cost_estimator import get_openai_token_cost_for_model, MODEL_COST_PER_1K_TOKENS
+
 
 class Run:
     def __init__(self, parent_id: Optional[str] = None, debug: bool = False) -> None:
