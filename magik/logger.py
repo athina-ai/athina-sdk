@@ -137,3 +137,45 @@ def log_generic_response(
             "magik-api-key": get_magik_api_key(),
         },
     )
+
+
+def log_langchain_llm_response(
+    prompt_slug,
+    prompt_sent,
+    prompt_response,
+    model,
+    response_time,
+    context=None,
+    environment=None,
+    customer_id=None,
+    customer_user_id=None,
+    session_id=None,
+    user_query=None,
+):
+    """
+    Track the request and response.
+    """
+
+    payload = {
+        "prompt_slug": prompt_slug,
+        "prompt_sent": prompt_sent,
+        "language_model_id": model,
+        "prompt_response": prompt_response,
+        "response_time": response_time,
+        "context": context,
+        "environment": environment,
+        "customer_id": str(customer_id),
+        "customer_user_id": str(customer_user_id),
+        "session_id": str(session_id),
+        "user_query": str(user_query),
+    }
+
+    # Remove None fields from the payload
+    payload = {k: v for k, v in payload.items() if v is not None}
+    requests.post(
+        f"{API_BASE_URL}/api/v1/log/prompt/langchain",
+        json=payload,
+        headers={
+            "magik-api-key": get_magik_api_key(),
+        },
+    )

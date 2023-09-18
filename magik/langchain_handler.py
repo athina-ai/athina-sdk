@@ -1,278 +1,277 @@
-from langchain.chat_models import ChatOpenAI
-from langchain.llms import OpenAI
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-    SystemMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-)
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple, Union, Sequence
+from uuid import UUID
 
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.chains import LLMChain
-from langchain.schema import BaseOutputParser
-from langchain.schema.output import LLMResult
-from langchain.schema.messages import BaseMessage, SystemMessage, HumanMessage
-from langchain.schema.agent import AgentAction, AgentFinish
+from langchain.schema import (
+    AgentAction,
+    AgentFinish,
+    BaseMessage,
+    ChatMessage,
+    LLMResult,
+)
+from langchain.schema.messages import (
+    AIMessage,
+    BaseMessage,
+    ChatMessage,
+    HumanMessage,
+    SystemMessage,
+)
+from langchain.schema.document import Document
 
-from typing import Any, Dict, List, Optional, Sequence, Union
-from uuid import UUID
-import logging
-import time
+from .config import get_magik_api_key
+from .logger import log_langchain_llm_response
 
-
-class Run:
-    def __init__(self, parent_id: Optional[str] = None, debug: bool = False) -> None:
-        self.parent_id = parent_id
-        self.runs = {}
-        self.function_calls = {}
-        self.output_dict = {} # New dict to log function calls
-        if debug:
-            logging.basicConfig()
-            self.log = logging.getLogger('Run')
-            self.log.setLevel(logging.DEBUG)
-        else:
-            self.log = logging.getLogger('Run')
-            self.log.setLevel(logging.WARNING)
-
-    def log_run(self, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> None:
-        run_info = {
-            'run_id': run_id,
-            'parent_run_id': parent_run_id,
-            'start_time': kwargs.get('start_time', None),
-            'end_time': kwargs.get('end_time', None),
-            'outputs': kwargs.get('outputs', None),
-            'inputs': kwargs.get('inputs', None),
-            'token': kwargs.get('token', None),
-            'error': kwargs.get('error', None),
-        }
-        # Remove None values
-        run_info = {k: v for k, v in run_info.items() if v is not None}
-        self.runs[run_id] = run_info
 
 class CallbackHandler(BaseCallbackHandler):
-    def __init__(self, magik_api_key: Optional[str] ) -> None:
-        self.run = Run(debug=True) # Create a single instance of Run
+    '''
+    Callback handler for the LangChain API.
+    '''
+
+    def __init__(
+        self,
+        prompt_slug: str,
+        magik_api_key: Optional[str] = None,
+        environment: Optional[str] = 'production',
+        session_id: Optional[str] = None,
+        customer_id: Optional[str] = None,
+        customer_user_id: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        '''Initialize the CallbackHandler'''
+        self.prompt_slug = prompt_slug
+        self.environment = environment
+        if not magik_api_key:
+            if not get_magik_api_key():
+                raise ValueError('No Magik API key provided')
+            else:
+                magik_api_key = get_magik_api_key()
         self.magik_api_key = magik_api_key
-        self.output_dict = {} 
-        
-    def get_runs(self):
-        return self.run.runs 
-    
+        if kwargs:
+            self.global_context = kwargs
+        else:
+            self.global_context = {}
+
+        self.session_id = session_id
+        self.customer_id = customer_id
+        self.customer_user_id = customer_user_id
+        self.runs: Dict[UUID, Dict[str, Any]] = {}
+
+    def on_retriever_end(
+        self,
+        documents: Sequence[Document],
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        **kwargs: Any,
+    ) -> Any:
+        try:
+            if run_id is None or run_id not in self.runs:
+                return
+            run_info = self.runs[run_id]
+            retrieved_documents_data = ''
+            for document in documents:
+                page_content = document.page_content
+                retrieved_documents_data += page_content + '\n'
+            self.global_context['documents'] = retrieved_documents_data
+            run_info['retrieved_documents'] = self.global_context
+        except Exception as e:
+            pass
+
     def on_chat_model_start(
-        self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any, 
+        self, serialized: Dict[str, Any], messages: List[List[BaseMessage]], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any,
     ) -> Any:
-        print("on_chat_model_start called")
-        start_time = time.time() 
-        print("\n Serialized:", serialized)
-        print("\n Messages:", messages)
-        print("\nkwargs:", kwargs)
-        print("\n start time:", start_time)
-        flattened_messages = [message for sublist in messages for message in sublist]  # Flatten the list of messages
-        user_query = ' '.join([message.content for message in flattened_messages if isinstance(message, HumanMessage)])  # Combine human messages
-        language_model_id = kwargs['invocation_params']['model']  # Get the model ID
-        prompt_sent = ' '.join([str(message) for message in flattened_messages])  # Combine system and human messages
-        # Create a new dict with the required information
-        self.run_info.update = {
-            'user_query': user_query,
-            'start_time': start_time,
-            'language_model_id': language_model_id,
-            'prompt_sent': prompt_sent
-        }
-        print("\nLLM start:" ,self.run_info)
-        self.run.log_run(run_id, parent_run_id, serialized=serialized, messages=messages, start_time=start_time)
-        self.run.function_calls[run_id] = 'on_chat_model_start'  # Log the function call
-        self.run.runs[run_id].update(self.run_info)   
+        '''
+        Log the chat model start
+        '''
+        try:
+            for message in messages:
+                message_dicts = self._create_message_dicts(message)
+            user_query = self._extract_user_query_from_chat_model_prompts(
+                messages)
+            self.runs[run_id] = {
+                'is_chat_model': True,
+                'user_query': user_query,
+                'prompt_sent': message_dicts,
+                'session_id': self.session_id,
+                'customer_id': self.customer_id,
+                'customer_user_id': self.customer_user_id,
+                'llm_start_time': datetime.now(timezone.utc),
+                'language_model_id': kwargs.get('invocation_params').get('model_name')
+            }
+            print(self.runs)
+        except Exception as e:
+            pass
 
-    def on_chain_start(
-        self, serialized: Dict[str, Any], inputs: Dict[str, Any], run_id: UUID, parent_run_id: Optional[UUID] = None,**kwargs: Any
+    def on_llm_start(
+        self,
+        serialized: Dict[str, Any],
+        prompts: List[str],
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        **kwargs: Any,
     ) -> Any:
-        print("on_chain_start called")
-        print("\n Serialized:", serialized)
-        print("\n Inputs", inputs)
-        print("\nkwargs:", kwargs)
-        start_time = time.time()
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, serialized=serialized, inputs=inputs, start_time=start_time)
-        self.run.function_calls[run_id] = 'on_chain_start'  # Log the function call
-        self.runs[run_id] = self.run.runs[run_id]  # Store the run dict in self.runs
+        try:
+            self.runs[run_id] = {
+                'is_chat_model': False,
+                'user_query': self._extract_user_query_from_llm_prompts(prompts),
+                'prompt_sent': ' '.join(prompts),
+                'session_id': self.session_id,
+                'customer_id': self.customer_id,
+                'customer_user_id': self.customer_user_id,
+                'llm_start_time': datetime.now(timezone.utc),
+                'language_model_id': kwargs.get('invocation_params').get('model_name')
+            }
+        except Exception as e:
+            pass
 
-    def on_chain_end(self, outputs: Dict[str, Any], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("on_chain_end called")
-        end_time = time.time()
-        print("\nOutputs:", outputs)
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, outputs=outputs, end_time=end_time)
-        self.run.function_calls[run_id] = 'on_chain_end'  # Log the function call
-        self.runs[run_id] = self.run.runs[run_id]  # Store the run dict in self.runs
+    def on_llm_end(
+        self,
+        response: LLMResult,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        **kwargs: Any,
+    ) -> None:
+        try:
+            run_info = self.runs.get(run_id, {})
+            if not run_info:
+                return
+            llm_end_time = datetime.now(timezone.utc)
+            run_info['response_time'] = round((
+                (llm_end_time - run_info['llm_start_time']).total_seconds())*1000)
 
-    def on_chat_model_end(self, outputs: Dict[str, Any], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("on_chat_model_end called")
-        end_time = time.time()
-        print("\n on chat model end")
-        print("\nOutputs:", outputs)
-        print("\nkwargs:", kwargs)
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, outputs=outputs, end_time=end_time)
-        self.run.function_calls[run_id] = 'on_chat_model_end'  # Log the function call
-        self.run.runs[run_id] = self.run.runs[run_id]  # Store the run dict in self.runs
+            for i in range(len(response.generations)):
+                generation = response.generations[i][0]
+                prompt_response = generation.text
+                llm_output = response.llm_output
+                token_usage = self._get_llm_usage(llm_output=llm_output)
 
-    # def on_llm_end(self, response: LLMResult, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-    #     print("on_llm_end called")
-    #     end_time = time.time()
-    #     token_usage = response.llm_output['token_usage']
-    #     prompt_tokens = token_usage['prompt_tokens']
-    #     completion_tokens = token_usage['completion_tokens']
-    #     total_tokens = token_usage['total_tokens']
-    #     prompt_completion = ', '.join([gen.text for gen in response.generations[0]])  # Join the prompt completions with a comma
-    #     print("\nExecuting: on_llm_end")
-    #     print("\nresponse:", response)
-    #     print("\nkwargs:", kwargs)
-    #     # Update the output dictionary with the required information
-    #     self.output_dict.update({
-    #         'prompt_response': prompt_completion,
-    #         'response_time': end_time - self.output_dict['start_time'],
-    #         'prompt_tokens': prompt_tokens,
-    #         'completion_tokens': completion_tokens,
-    #         'total_tokens': total_tokens,
-    #     })
-    #     print("\nFinal output:", self.output_dict)
-        # return self.output_dict
-    def on_llm_end(self, response: LLMResult, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        end_time = time.time()
-        token_usage = response.llm_output['token_usage']
-        prompt_tokens = token_usage['prompt_tokens']
-        completion_tokens = token_usage['completion_tokens']
-        total_tokens = token_usage['total_tokens']
-        prompt_completion = ', '.join([gen.text for gen in response.generations[0]])  # Join the prompt completions with a comma
+                run_info['prompt_response'] = prompt_response
+                run_info['prompt_tokens'] = token_usage['prompt_tokens']
+                run_info['completion_tokens'] = token_usage['completion_tokens']
+                run_info['total_tokens'] = token_usage['total_tokens']
 
-        # Create a new dict with the required information
-        self.run_info.update = {
-            'prompt_response': prompt_completion,
-            'completion_tokens': completion_tokens,
-            'prompt_tokens': prompt_tokens,
-            'total_tokens': total_tokens,
-            'end_time': end_time
-        }
-        print("\nLLM END:" ,self.run_info)
-        # Store the run dict in self.runs
-        self.run.runs[run_id].update(self.run_info)
+                # LOG TO API SERVER
+                self._log_llm_response(run_info)
+        except Exception as e:
+            pass
 
-    # def on_llm_start(
-    #     self, serialized: Dict[str, Any], prompts: List[str], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any
-    # ) -> Any:
-    #     start_time = time.time()
-    #     user_query = prompts[0]  # Assuming the first prompt is the user query
-    #     print("\nExecuting: on_llm_start")
-    #     print("\nSerialized:", serialized)
-    #     print("\nPrompts:", prompts)
-    #     # Store the user query and start time in the output dictionary
-    #     self.output_dict['user_query'] = user_query
-    #     self.output_dict['start_time'] = start_time
-    #     self.output_dict['prompt_sent'] = serialized['prompt']  # Assuming 'prompt' key in serialized dict
-    #     self.output_dict['language_model_id'] = serialized['model_name']  # Assuming 'model' key in serialized dict        
-    def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("on_llm_start method called")
-        
-        start_time = time.time()
-        user_query = prompts[0]  # Assuming the first prompt is the user query
+    def on_tool_start(
+        self,
+        serialized: Dict[str, Any],
+        input_str: str,
+        **kwargs: Any,
+    ) -> None:
+        '''Do nothing when tool starts.'''
+        pass
 
-        # Create a new dict with the required information
-        run_info = {
-            'user_query': user_query,
-            'start_time': start_time
-        }
-        print("\nLLM START:" ,run_info)
-        # Store the run dict in self.runs
-        self.runs[run_id] = run_info  # Log the function call
+    def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
+        '''Do nothing when agent takes a specific action.'''
+        pass
 
-    def on_llm_new_token(self, token: str, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_llm_new_token")
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, token=token)
-        self.run.function_calls[run_id] = 'on_llm_new_token'  # Log the function call
+    def on_tool_end(
+        self,
+        output: str,
+        observation_prefix: Optional[str] = None,
+        llm_prefix: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        '''Do nothing when tool ends.'''
+        pass
 
-    def on_llm_error(self, error: Union[Exception, KeyboardInterrupt], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_llm_error")
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, error=error)
-        self.run.function_calls[run_id] = 'on_llm_error'  # Log the function call
+    def on_tool_error(
+        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
+    ) -> None:
+        '''Do nothing when tool outputs an error.'''
+        pass
 
-    def on_chain_error(self, error: Union[Exception, KeyboardInterrupt], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_chain_error")
-        self.run.runs = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, error=error)
-        self.run.function_calls[run_id] = 'on_chain_error'  # Log the function call
-    
-    def on_tool_start(self, serialized: Dict[str, Any], input_str: str, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_tool_start")
-        start_time = time.time()
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, serialized=serialized, input_str=input_str, start_time=start_time)
-        run.function_calls[run_id] = 'on_tool_start'  # Log the function call
+    def on_text(self, text: str, **kwargs: Any) -> None:
+        '''Do nothing'''
+        pass
 
-    def on_tool_end(self, output: str, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_tool_end")
-        end_time = time.time()
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, output=output, end_time=end_time)
-        run.function_calls[run_id] = 'on_tool_end'  # Log the function call
+    def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> None:
+        '''Do nothing'''
+        pass
 
-    def on_tool_error(self, error: Union[Exception, KeyboardInterrupt], run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_tool_error")
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, error=error)
-        run.function_calls[run_id] = 'on_tool_error'  # Log the function call
+    def _get_llm_usage(self, llm_output: Dict) -> Dict:
+        '''
+        Fetch prompt tokens, completion tokens and total tokens from llm output
+        '''
+        if 'token_usage' in llm_output:
+            return {
+                'prompt_tokens': llm_output['token_usage']['prompt_tokens'] if 'prompt_tokens' in llm_output['token_usage'] else None,
+                'completion_tokens': llm_output['token_usage']['completion_tokens'] if 'completion_tokens' in llm_output['token_usage'] else None,
+                'total_tokens': llm_output['token_usage']['total_tokens'] if 'total_tokens' in llm_output['token_usage'] else None,
+            }
+        else:
+            return {
+                'prompt_tokens': None,
+                'completion_tokens': None,
+                'total_tokens': None
+            }
 
-    # def on_text(self, text: str, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-    #     # Store the user query in the output dictionary
-    #     self.output_dict['user_query'] = text
-    #     print("\nExecuting: on_text")
-    #     print("\nText:", text)
-    def on_text(self, text: str, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_text")
-        print("\nText:", text)
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, text=text)
-        run.function_calls[run_id] = 'on_text'  # Log the function call
+    def _log_llm_response(self, run_info: Dict):
+        '''
+        Logs the LLM response to magik
+        '''
+        try:
+            log_langchain_llm_response(prompt_slug=run_info['prompt_slug'], prompt_sent=run_info['prompt_sent'],
+                                       prompt_response=run_info['prompt_response'], model=run_info['language_model_id'],
+                                       response_time=run_info['response_time'], environment=self.environment,
+                                       context=None, user_query=run_info['user_query'], customer_id=run_info['customer_id'],
+                                       session_id=run_info['session_id'], customer_user_id=run_info['customer_user_id'])
 
-    def on_agent_action(self, action: AgentAction, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_agent_action")
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, action=action)
-        run.function_calls[run_id] = 'on_agent_action'  # Log the function call
-        
-    def on_agent_finish(self, finish: AgentFinish, run_id: UUID, parent_run_id: Optional[UUID] = None, **kwargs: Any) -> Any:
-        print("\nExecuting: on_agent_finish")
-        run = Run(parent_id=parent_run_id, debug=True)
-        self.run.log_run(run_id, parent_run_id, finish=finish)
-        run.function_calls[run_id] = 'on_agent_finish'  # Log the function call
+        except Exception as e:
+            pass
 
-class CommaSeparatedListOutputParser(BaseOutputParser):
-    """Parse the output of an LLM call to a comma-separated list."""
+    def _convert_message_to_dict(self, message: BaseMessage) -> Dict[str, Any]:
+        if isinstance(message, HumanMessage):
+            message_dict = {'role': 'user', 'content': message.content}
+        elif isinstance(message, AIMessage):
+            message_dict = {'role': 'assistant', 'content': message.content}
+        elif isinstance(message, SystemMessage):
+            message_dict = {'role': 'system', 'content': message.content}
+        elif isinstance(message, ChatMessage):
+            message_dict = {'role': message.role, 'content': message.content}
+        else:
+            raise ValueError(f'Got unknown type {message}')
+        if 'name' in message.additional_kwargs:
+            message_dict['name'] = message.additional_kwargs['name']
+        return message_dict
 
-    def parse(self, text: str):
-        """Parse the output of an LLM call."""
-        return text.strip().split(", ")
+    def _create_message_dicts(
+        self, messages: List[BaseMessage]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        message_dicts = [self._convert_message_to_dict(m) for m in messages]
+        return message_dicts
 
-template = """You are a helpful assistant who generates comma separated lists.
-A user will pass in a category, and you should generate 5 objects in that category in a comma separated list.
-ONLY return a comma separated list, and nothing more."""
-system_message_prompt = SystemMessagePromptTemplate.from_template(template)
-human_template = "{text}"
-human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
+    def _extract_user_query_from_chat_model_prompts(self, messages):
+        try:
+            user_query = ''
 
+            for message_group in messages:
+                for message in message_group:
+                    if isinstance(message, HumanMessage):
+                        if user_query:
+                            user_query += '. '
+                        user_query += message.content
 
-chat_prompt = ChatPromptTemplate.from_messages(
-    [system_message_prompt, human_message_prompt])
+            return user_query
+        except Exception as e:
+            return ''
 
-handler = CallbackHandler(magik_api_key="QNPKZp1q97kMfSIPoS6_1eNpllOU3l3a")
+    def _extract_user_query_from_llm_prompts(self, prompts):
+        try:
+            user_query = ''
+            for prompt in prompts:
+                if isinstance(prompt, str):
+                    if user_query:
+                        user_query += '. '
+                    user_query += prompt
 
-chain = LLMChain(
-    llm=ChatOpenAI(
-        openai_api_key="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"),
-    prompt=chat_prompt,
-    output_parser=CommaSeparatedListOutputParser()
-)
-print(chain.run("Give me a list of 5 bugattis", callbacks=[handler]))
-
-
-
+            return user_query
+        except Exception as e:
+            return ''
