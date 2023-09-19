@@ -107,6 +107,9 @@ def log_generic_response(
     prompt_slug: str,
     prompt: str,
     llm_response: str,
+    prompt_tokens: None,
+    completion_tokens: None,
+    total_tokens: None,
     response_time=None,
     context=None,
     environment=None,
@@ -119,7 +122,10 @@ def log_generic_response(
         "prompt_slug": prompt_slug,
         "prompt_text": prompt,
         "language_model_id": "generic",
-        "completion": {"text": llm_response},
+        "prompt_response": llm_response,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
         "response_time": response_time,
         "context": context,
         "environment": environment,
@@ -155,7 +161,6 @@ def log_langchain_llm_response(
     """
     Track the request and response.
     """
-
     payload = {
         "prompt_slug": prompt_slug,
         "prompt_sent": prompt_sent,
@@ -169,7 +174,6 @@ def log_langchain_llm_response(
         "session_id": str(session_id),
         "user_query": str(user_query),
     }
-
     # Remove None fields from the payload
     payload = {k: v for k, v in payload.items() if v is not None}
     requests.post(

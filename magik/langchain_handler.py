@@ -39,8 +39,6 @@ class CallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         '''Initialize the CallbackHandler'''
-        self.prompt_slug = prompt_slug
-        self.environment = environment
         if not magik_api_key:
             if not get_magik_api_key():
                 raise ValueError('No Magik API key provided')
@@ -52,6 +50,8 @@ class CallbackHandler(BaseCallbackHandler):
         else:
             self.global_context = {}
 
+        self.prompt_slug = prompt_slug
+        self.environment = environment
         self.session_id = session_id
         self.customer_id = customer_id
         self.customer_user_id = customer_user_id
@@ -91,6 +91,7 @@ class CallbackHandler(BaseCallbackHandler):
                 messages)
             self.runs[run_id] = {
                 'is_chat_model': True,
+                'prompt_slug': self.prompt_slug,
                 'user_query': user_query,
                 'prompt_sent': message_dicts,
                 'session_id': self.session_id,
@@ -99,7 +100,6 @@ class CallbackHandler(BaseCallbackHandler):
                 'llm_start_time': datetime.now(timezone.utc),
                 'language_model_id': kwargs.get('invocation_params').get('model_name')
             }
-            print(self.runs)
         except Exception as e:
             pass
 
@@ -116,8 +116,9 @@ class CallbackHandler(BaseCallbackHandler):
         try:
             self.runs[run_id] = {
                 'is_chat_model': False,
+                'prompt_slug': self.prompt_slug,
                 'user_query': self._extract_user_query_from_llm_prompts(prompts),
-                'prompt_sent': ' '.join(prompts),
+                'prompt_sent': {'text': ' '.join(prompts)},
                 'session_id': self.session_id,
                 'customer_id': self.customer_id,
                 'customer_user_id': self.customer_user_id,
