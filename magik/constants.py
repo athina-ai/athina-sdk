@@ -1,5 +1,6 @@
 # API URLs
 API_BASE_URL = "https://api.magiklabs.app"
+
 DEPLOY_URL = f"{API_BASE_URL}/api/v1/testDeploy"
 RUN_URL = f"{API_BASE_URL}/api/v1/testRun/trigger/byPromptSlug"
 
