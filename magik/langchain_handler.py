@@ -48,7 +48,7 @@ class CallbackHandler(BaseCallbackHandler):
         if kwargs:
             self.global_context = kwargs
         else:
-            self.global_context = {}
+            self.global_context = None
 
         self.prompt_slug = prompt_slug
         self.environment = environment
@@ -93,6 +93,7 @@ class CallbackHandler(BaseCallbackHandler):
                 'is_chat_model': True,
                 'prompt_slug': self.prompt_slug,
                 'user_query': user_query,
+                'context': self.global_context,
                 'prompt_sent': message_dicts,
                 'session_id': self.session_id,
                 'customer_id': self.customer_id,
@@ -118,6 +119,7 @@ class CallbackHandler(BaseCallbackHandler):
                 'is_chat_model': False,
                 'prompt_slug': self.prompt_slug,
                 'user_query': self._extract_user_query_from_llm_prompts(prompts),
+                'context': self.global_context,
                 'prompt_sent': {'text': ' '.join(prompts)},
                 'session_id': self.session_id,
                 'customer_id': self.customer_id,
@@ -221,9 +223,12 @@ class CallbackHandler(BaseCallbackHandler):
         try:
             log_langchain_llm_response(prompt_slug=run_info['prompt_slug'], prompt_sent=run_info['prompt_sent'],
                                        prompt_response=run_info['prompt_response'], model=run_info['language_model_id'],
-                                       response_time=run_info['response_time'], environment=self.environment,
-                                       context=None, user_query=run_info['user_query'], customer_id=run_info['customer_id'],
-                                       session_id=run_info['session_id'], customer_user_id=run_info['customer_user_id'])
+                                       prompt_tokens=run_info['prompt_tokens'], completion_tokens=run_info['completion_tokens'],
+                                       total_tokens=run_info['total_tokens'], response_time=run_info['response_time'],
+                                       environment=self.environment, context=run_info[
+                                           'context'], user_query=run_info['user_query'],
+                                       customer_id=run_info['customer_id'], session_id=run_info['session_id'],
+                                       customer_user_id=run_info['customer_user_id'])
 
         except Exception as e:
             pass
